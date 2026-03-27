@@ -68,7 +68,7 @@ As páginas principais são:
 No topo você encontra:
 - data operacional atual
 - navegação entre dias
-- busca global por trabalho, cliente/projeto e bloqueio
+- busca global por trabalho, cliente/projeto, solicitação, agenda e bloqueio
 - feedback operacional curto
 - botões `Nova demanda` e `Novo trabalho`
 - atalhos visíveis quando a tela suporta teclado

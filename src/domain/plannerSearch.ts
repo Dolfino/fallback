@@ -1,13 +1,18 @@
+import { getTimelineForDate } from "../data/selectors";
 import type { PlannerData } from "../types/planner";
+import { formatDateShort } from "../utils/format";
 
 export interface PlannerGlobalSearchResult {
   id: string;
-  kind: "work" | "dependency";
+  kind: "work" | "dependency" | "request" | "schedule";
   title: string;
   subtitle: string;
   detail: string;
   workId?: string;
   dependencyId?: string;
+  requestId?: string;
+  date?: string;
+  slotId?: string;
 }
 
 function normalizeForSearch(value: string) {
@@ -53,6 +58,41 @@ export function searchPlannerData(
   }
 
   const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  const requestResults = data.solicitacoes
+    .map((request) => {
+      const score = createSearchScore(
+        [
+          request.tituloInicial,
+          request.descricaoInicial,
+          request.solicitante,
+          request.area,
+          request.statusTriagem,
+          request.decisao ?? undefined,
+          request.prazoSugerido,
+          formatDateShort(request.prazoSugerido),
+        ],
+        tokens,
+      );
+
+      if (!score) {
+        return null;
+      }
+
+      return {
+        score,
+        result: {
+          id: `request-${request.id}`,
+          kind: "request" as const,
+          title: request.tituloInicial,
+          subtitle: `Solicitação · ${request.solicitante}`,
+          detail: `${request.area} · prazo ${formatDateShort(request.prazoSugerido)}`,
+          requestId: request.id,
+          date: request.prazoSugerido,
+        },
+      };
+    })
+    .filter(Boolean);
+
   const dependencyResults = data.dependencias
     .map((dependency) => {
       const work = data.trabalhos.find((item) => item.id === dependency.trabalhoId);
@@ -82,6 +122,59 @@ export function searchPlannerData(
           detail: `${dependency.tipo} · responsável ${dependency.responsavelExterno}`,
           workId: dependency.trabalhoId,
           dependencyId: dependency.id,
+        },
+      };
+    })
+    .filter(Boolean);
+
+  const scheduleResults = data.diasSemana
+    .flatMap((date) =>
+      getTimelineForDate(data, date).map((entry) => ({
+        date,
+        entry,
+      })),
+    )
+    .map(({ date, entry }) => {
+      const score = createSearchScore(
+        [
+          entry.slot.nome,
+          entry.slot.horaInicio,
+          entry.slot.horaFim,
+          `${entry.slot.horaInicio} ${entry.slot.horaFim}`,
+          date,
+          formatDateShort(date),
+          entry.trabalho?.titulo,
+          entry.trabalho?.clienteProjeto,
+          entry.trabalho?.categoria,
+          entry.trabalho?.area,
+          entry.statusVisual,
+        ],
+        tokens,
+      );
+
+      if (!score) {
+        return null;
+      }
+
+      const title = `${entry.slot.nome} · ${formatDateShort(date)} · ${entry.slot.horaInicio}`;
+      const subtitle = entry.trabalho
+        ? `Agenda · ${entry.trabalho.titulo}`
+        : "Agenda livre";
+      const detail = entry.trabalho
+        ? `${entry.trabalho.clienteProjeto} · ${entry.slot.horaInicio} - ${entry.slot.horaFim}`
+        : `${entry.slot.tipo} · ${entry.slot.horaInicio} - ${entry.slot.horaFim}`;
+
+      return {
+        score,
+        result: {
+          id: `schedule-${date}-${entry.slot.id}`,
+          kind: "schedule" as const,
+          title,
+          subtitle,
+          detail,
+          date,
+          slotId: entry.slot.id,
+          workId: entry.trabalho?.id,
         },
       };
     })
@@ -120,7 +213,7 @@ export function searchPlannerData(
     })
     .filter(Boolean);
 
-  return [...workResults, ...dependencyResults]
+  return [...workResults, ...dependencyResults, ...requestResults, ...scheduleResults]
     .sort((left, right) => {
       if (right!.score !== left!.score) {
         return right!.score - left!.score;

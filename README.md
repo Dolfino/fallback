@@ -44,7 +44,7 @@ npm run backend:dev
 - `npm run test:ui:smoke`: valida a UI remota em navegador headless
 
 ## Recursos de produto já operacionais
-- busca global no topo para trabalhos, clientes/projetos e bloqueios
+- busca global no topo para trabalhos, clientes/projetos, solicitações, agendas e bloqueios
 - configurações reais de tela inicial, data base local e persistência no navegador
 - restauração rápida do ambiente local a partir da seed configurada
 

@@ -160,6 +160,8 @@ As páginas principais de lista já têm:
 A barra superior agora também faz busca global por:
 - trabalho
 - cliente/projeto
+- solicitação
+- agenda/slot
 - bloqueio
 
 Ao selecionar um resultado, o sistema abre o contexto correspondente.

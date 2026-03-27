@@ -393,6 +393,29 @@ export function usePlannerState(adapter?: PlannerAppPort) {
             tone: "warning",
           },
         });
+      } else if (result.kind === "request") {
+        setActiveView("requests");
+        setSystemFeedback({
+          title: "Solicitação localizada",
+          detail: result.title,
+          tone: "neutral",
+          contextTag: {
+            label: "Busca global",
+            tone: "neutral",
+          },
+        });
+      } else if (result.kind === "schedule" && result.slotId && result.date) {
+        setActiveView("agendas");
+        selectSlot(result.slotId, result.date);
+        setSystemFeedback({
+          title: "Agenda localizada",
+          detail: result.title,
+          tone: "opportunity",
+          contextTag: {
+            label: "Busca global",
+            tone: "opportunity",
+          },
+        });
       } else {
         setActiveView("work-detail");
       }
