@@ -157,6 +157,13 @@ As páginas principais de lista já têm:
 - destaque do termo encontrado
 - filtros e ordenação quando aplicável
 
+A barra superior agora também faz busca global por:
+- trabalho
+- cliente/projeto
+- bloqueio
+
+Ao selecionar um resultado, o sistema abre o contexto correspondente.
+
 ## Quando usar o manual completo
 Use o manual completo se você precisar:
 - entender revisão assistida em detalhe

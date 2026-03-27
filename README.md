@@ -6,6 +6,7 @@ Aplicação para organizar trabalho diário por agendas, blocos, prioridades, bl
 - frontend: React + TypeScript + Tailwind + Vite
 - backend: Fastify + TypeScript
 - persistência remota: snapshot JSON ou PostgreSQL
+- persistência local: navegador, quando habilitada nas configurações
 
 ## Como começar
 
@@ -41,6 +42,11 @@ npm run backend:dev
 - `npm run backend:reset`: restaura a seed remota determinística `2026-03-23`
 - `npm run test:contracts`: roda contratos HTTP, adapter remoto e persistência
 - `npm run test:ui:smoke`: valida a UI remota em navegador headless
+
+## Recursos de produto já operacionais
+- busca global no topo para trabalhos, clientes/projetos e bloqueios
+- configurações reais de tela inicial, data base local e persistência no navegador
+- restauração rápida do ambiente local a partir da seed configurada
 
 ## Variáveis de ambiente
 O arquivo [.env.example](/home/dns/Desenvolvimento/Planejador/.env.example) reúne as variáveis mais úteis para frontend, backend, PostgreSQL e smoke test.

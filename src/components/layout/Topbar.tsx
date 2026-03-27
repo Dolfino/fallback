@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import type { SystemFeedback } from "../../types/domain";
 import type { PlannerAppOperationError, PlannerAppOperationKind } from "../../application/plannerAppContracts";
+import type { PlannerGlobalSearchResult } from "../../domain/plannerSearch";
 
 interface TopbarProps {
   currentDateLabel: string;
   feedback: SystemFeedback | null;
+  searchQuery: string;
+  searchResults: PlannerGlobalSearchResult[];
   operationState?: {
     pending?: {
       kind: PlannerAppOperationKind;
@@ -14,6 +18,8 @@ interface TopbarProps {
   shortcutHint?: string;
   onShiftDate: (direction: -1 | 1) => void;
   onPrimaryAction: (view: "new-work" | "requests") => void;
+  onSearchQueryChange: (value: string) => void;
+  onSearchResultOpen: (result: PlannerGlobalSearchResult) => void;
   onRetryOperation?: () => void;
   onDismissOperationError?: () => void;
 }
@@ -21,13 +27,18 @@ interface TopbarProps {
 export function Topbar({
   currentDateLabel,
   feedback,
+  searchQuery,
+  searchResults,
   operationState,
   shortcutHint,
   onShiftDate,
   onPrimaryAction,
+  onSearchQueryChange,
+  onSearchResultOpen,
   onRetryOperation,
   onDismissOperationError,
 }: TopbarProps) {
+  const [isSearchActive, setIsSearchActive] = useState(false);
   const feedbackToneStyles = {
     neutral: "border-slate-200 bg-white text-slate-700",
     success: "border-emerald-200 bg-emerald-50 text-emerald-800",
@@ -47,6 +58,7 @@ export function Topbar({
     feedback && feedback.contextTag
       ? feedback.contextTag.label.toLowerCase() !== feedback.title.toLowerCase()
       : true;
+  const shouldShowSearchResults = isSearchActive && searchQuery.trim().length > 0;
   const pendingLabel =
     operationState?.pending?.kind === "create_work"
       ? "Criando trabalho"
@@ -93,14 +105,60 @@ export function Topbar({
         </div>
 
         <div className="flex min-w-0 items-center gap-3">
-          <label className="flex min-w-[320px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <Search className="h-4 w-4 text-slate-400" />
-            <input
-              className="w-full border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
-              placeholder="Buscar trabalho, cliente ou bloqueio"
-              type="search"
-            />
-          </label>
+          <div className="relative">
+            <label className="flex min-w-[320px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <Search className="h-4 w-4 text-slate-400" />
+              <input
+                className="w-full border-none bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+                onBlur={() => {
+                  window.setTimeout(() => {
+                    setIsSearchActive(false);
+                  }, 120);
+                }}
+                onChange={(event) => onSearchQueryChange(event.target.value)}
+                onFocus={() => setIsSearchActive(true)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && searchResults[0]) {
+                    event.preventDefault();
+                    onSearchResultOpen(searchResults[0]);
+                    setIsSearchActive(false);
+                  }
+                }}
+                placeholder="Buscar trabalho, cliente ou bloqueio"
+                type="search"
+                value={searchQuery}
+              />
+            </label>
+
+            {shouldShowSearchResults ? (
+              <div className="absolute left-0 right-0 top-[calc(100%+12px)] z-20 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+                {searchResults.length ? (
+                  searchResults.map((result) => (
+                    <button
+                      key={result.id}
+                      className="block w-full border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-slate-50"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        onSearchResultOpen(result);
+                        setIsSearchActive(false);
+                      }}
+                      type="button"
+                    >
+                      <p className="text-sm font-semibold text-slate-900">{result.title}</p>
+                      <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-slate-500">
+                        {result.subtitle}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-600">{result.detail}</p>
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-4 text-sm text-slate-500">
+                    Nenhum resultado para esta busca.
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
 
           <button
             className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400"

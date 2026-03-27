@@ -173,6 +173,7 @@ async function resolveLocalReview(
 
 export function createPlannerLocalAdapter(): PlannerAppPort {
   return {
+    mode: "local",
     executeCommand(request) {
       return executeLocalCommand(request);
     },

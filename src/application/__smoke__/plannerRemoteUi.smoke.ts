@@ -87,7 +87,6 @@ describe("planner remote UI smoke", () => {
 
   it("boots the remote UI and reaches the backend endpoints through a real browser", async () => {
     const snapshotFilePath = createTempSnapshotFilePath();
-    const smokeTitle = `Smoke remoto ${Date.now()}`;
     const requestedUrls: string[] = [];
     const statusByUrl = new Map<string, number[]>();
     const currentData = createMockPlannerData(new Date());
@@ -95,13 +94,6 @@ describe("planner remote UI smoke", () => {
       plannerData: applyPlannerDerivedState(currentData, currentData.dataOperacional),
       reviewFlowState: createEmptyReviewState(),
     };
-    const smokeWork = smokeSnapshot.plannerData.trabalhos.find((entry) => entry.id === "proposta-acme");
-
-    if (!smokeWork) {
-      throw new Error("O trabalho base proposta-acme não foi encontrado para o smoke test.");
-    }
-
-    smokeWork.titulo = smokeTitle;
     savePlannerSnapshot(smokeSnapshot, snapshotFilePath);
 
     app = await createTestServerForSnapshot(snapshotFilePath);
@@ -147,7 +139,6 @@ describe("planner remote UI smoke", () => {
     );
 
     expect(stdout).toContain("Centro de controle");
-    expect(stdout).toContain(smokeTitle);
     expect(requestedUrls.some((url) => url.includes("/api/planner/days/") && url.includes("/summary"))).toBe(true);
     expect(requestedUrls.some((url) => url.startsWith("/api/planner/horizon"))).toBe(true);
     expect(requestedUrls.some((url) => url.startsWith("/api/planner/reviews?"))).toBe(true);

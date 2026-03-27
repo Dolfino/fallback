@@ -71,6 +71,7 @@ Resultado:
 - frontend disponível no endereço exibido pelo Vite
 - dados vindos da seed local do frontend
 - nenhuma dependência do backend
+- persistência no navegador quando habilitada em `Configurações`
 
 ## Como rodar em modo remoto
 Esse é o modo indicado para validar integração ponta a ponta com o backend real atual.
@@ -250,7 +251,7 @@ curl "http://localhost:3000/planner/day-summary?referenceDate=2026-03-23"
 - se subiu backend e iniciou com `VITE_PLANNER_ADAPTER=remote`, está em `remoto`
 
 ### Comportamento esperado
-- modo local: navegação mais simples, sem depender do backend
+- modo local: navegação sem depender do backend, com persistência local opcional no navegador
 - modo remoto: operações persistem no snapshot do backend
 
 ## Troubleshooting rápido

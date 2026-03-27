@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { createPlannerAppAdapter } from "../application/createPlannerAppAdapter";
 import type { PlannerAppPort, PlannerAppStateSnapshot } from "../application/plannerAppPort";
 import type {
@@ -8,7 +8,15 @@ import type {
   PlannerAppRequestMeta,
   PlannerShortHorizonSnapshot,
 } from "../application/plannerAppContracts";
-import { createMockPlannerData } from "../data/mockData";
+import {
+  clearPlannerLocalSnapshot,
+  createLocalControllerSeed,
+  loadPlannerLocalSnapshot,
+  loadPlannerPreferences,
+  resetPlannerPreferences as resetStoredPlannerPreferences,
+  savePlannerLocalSnapshot,
+  savePlannerPreferences,
+} from "../application/plannerBrowserStorage";
 import {
   getShortHorizonLoad,
   getTimelineForDate,
@@ -25,6 +33,7 @@ import {
   buildReviewItems,
   createEmptyReviewState,
 } from "../domain/plannerReviewFlow";
+import { searchPlannerData, type PlannerGlobalSearchResult } from "../domain/plannerSearch";
 import type {
   DependencyPolicyAction,
   ImmediateImpactSummary,
@@ -38,7 +47,7 @@ import type {
   SlotFeedback,
   SystemFeedback,
 } from "../types/domain";
-import type { AppView, WeekFilters } from "../types/ui";
+import type { AppView, PlannerUserPreferences, WeekFilters } from "../types/ui";
 import { addDays } from "../utils/date";
 
 function isInputTarget(target: EventTarget | null) {
@@ -58,17 +67,24 @@ function createRequestMeta(): PlannerAppRequestMeta {
 }
 
 export function usePlannerState(adapter?: PlannerAppPort) {
-  const initialData = useMemo(() => {
-    const raw = createMockPlannerData();
-    return applyPlannerDerivedState(raw, raw.dataOperacional);
-  }, []);
-  const initialReviewState = useMemo(() => createEmptyReviewState(), []);
+  const plannerApp = useMemo(() => adapter ?? createPlannerAppAdapter(), [adapter]);
+  const isRemoteMode = plannerApp.mode === "remote";
+  const [preferences, setPreferences] = useState<PlannerUserPreferences>(() =>
+    loadPlannerPreferences(),
+  );
+  const initialControllerState = useMemo(() => {
+    if (!isRemoteMode && preferences.persistLocalState) {
+      return loadPlannerLocalSnapshot() ?? createLocalControllerSeed(preferences);
+    }
 
-  const [plannerData, setPlannerData] = useState(initialData);
-  const [activeView, setActiveView] = useState<AppView>("today");
-  const [selectedDate, setSelectedDate] = useState(initialData.dataOperacional);
-  const [selectedSlotId, setSelectedSlotId] = useState("slot-2");
-  const [selectedWorkId, setSelectedWorkId] = useState("proposta-acme");
+    return createLocalControllerSeed(preferences);
+  }, [isRemoteMode, preferences]);
+
+  const [plannerData, setPlannerData] = useState(initialControllerState.plannerData);
+  const [activeView, setActiveView] = useState<AppView>(initialControllerState.activeView);
+  const [selectedDate, setSelectedDate] = useState(initialControllerState.selectedDate);
+  const [selectedSlotId, setSelectedSlotId] = useState(initialControllerState.selectedSlotId);
+  const [selectedWorkId, setSelectedWorkId] = useState(initialControllerState.selectedWorkId);
   const [weekFilters, setWeekFilters] = useState<WeekFilters>({
     prioridade: "todas",
     status: "todos",
@@ -84,23 +100,27 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     },
   });
   const [slotFeedback, setSlotFeedback] = useState<SlotFeedback | null>(null);
-  const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(true);
+  const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(
+    initialControllerState.isDetailPanelOpen,
+  );
   const [recentConsequences, setRecentConsequences] = useState<PlannerConsequence[]>([]);
   const [impactSummary, setImpactSummary] = useState<ImmediateImpactSummary | null>(null);
-  const [reviewFlowState, setReviewFlowState] = useState<ReviewFlowState>(initialReviewState);
+  const [reviewFlowState, setReviewFlowState] = useState<ReviewFlowState>(
+    initialControllerState.reviewFlowState,
+  );
   const [todaySummary, setTodaySummary] = useState(() =>
-    getTodayDecisionSummary(initialData, initialData.dataOperacional),
+    getTodayDecisionSummary(initialControllerState.plannerData, initialControllerState.plannerData.dataOperacional),
   );
   const [shortHorizonSnapshot, setShortHorizonSnapshot] = useState<PlannerShortHorizonSnapshot>(() => ({
-    load: getShortHorizonLoad(initialData, initialData.dataOperacional),
-    pressurePoints: getUpcomingPressurePoints(initialData, initialData.dataOperacional),
-    tomorrow: getTomorrowPreview(initialData, initialData.dataOperacional),
+    load: getShortHorizonLoad(initialControllerState.plannerData, initialControllerState.plannerData.dataOperacional),
+    pressurePoints: getUpcomingPressurePoints(initialControllerState.plannerData, initialControllerState.plannerData.dataOperacional),
+    tomorrow: getTomorrowPreview(initialControllerState.plannerData, initialControllerState.plannerData.dataOperacional),
   }));
   const [rescheduleReviewItems, setRescheduleReviewItems] = useState<ReviewItemView[]>(() =>
     buildReviewItems({
-      data: initialData,
-      referenceDate: initialData.dataOperacional,
-      state: initialReviewState,
+      data: initialControllerState.plannerData,
+      referenceDate: initialControllerState.plannerData.dataOperacional,
+      state: initialControllerState.reviewFlowState,
     }),
   );
   const [rescheduleSuggestions, setRescheduleSuggestions] = useState<Record<string, ReviewOption | undefined>>({});
@@ -109,8 +129,13 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     targetId?: string;
   } | null>(null);
   const [operationError, setOperationError] = useState<PlannerAppOperationError | null>(null);
-  const plannerApp = useMemo(() => adapter ?? createPlannerAppAdapter(), [adapter]);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+  const deferredGlobalSearchQuery = useDeferredValue(globalSearchQuery);
   const retryLastOperationRef = useRef<null | (() => Promise<void>)>(null);
+  const globalSearchResults = useMemo(
+    () => searchPlannerData(plannerData, deferredGlobalSearchQuery),
+    [deferredGlobalSearchQuery, plannerData],
+  );
 
   const appState = (): PlannerAppStateSnapshot => ({
     plannerData,
@@ -120,6 +145,41 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     isDetailPanelOpen,
     reviewFlowState,
   });
+
+  useEffect(() => {
+    savePlannerPreferences(preferences);
+  }, [preferences]);
+
+  useEffect(() => {
+    if (isRemoteMode) {
+      return;
+    }
+
+    if (!preferences.persistLocalState) {
+      clearPlannerLocalSnapshot();
+      return;
+    }
+
+    savePlannerLocalSnapshot({
+      plannerData,
+      reviewFlowState,
+      activeView,
+      selectedDate,
+      selectedSlotId,
+      selectedWorkId,
+      isDetailPanelOpen,
+    });
+  }, [
+    activeView,
+    isDetailPanelOpen,
+    isRemoteMode,
+    plannerData,
+    preferences.persistLocalState,
+    reviewFlowState,
+    selectedDate,
+    selectedSlotId,
+    selectedWorkId,
+  ]);
 
   useEffect(() => {
     if (!slotFeedback) {
@@ -215,6 +275,79 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     setActiveView(view);
   };
 
+  const updatePreferences = (nextPreferences: Partial<PlannerUserPreferences>) => {
+    setPreferences((current) => ({
+      ...current,
+      ...nextPreferences,
+      localReferenceDate:
+        nextPreferences.localReferenceDate === ""
+          ? current.localReferenceDate
+          : nextPreferences.localReferenceDate ?? current.localReferenceDate,
+    }));
+  };
+
+  const resetLocalWorkspace = () => {
+    if (isRemoteMode) {
+      setSystemFeedback({
+        title: "Ação disponível só no modo local",
+        detail: "A restauração da seed local não altera o backend remoto atual.",
+        tone: "warning",
+        contextTag: {
+          label: "Modo remoto",
+          tone: "warning",
+        },
+      });
+      return;
+    }
+
+    const nextSeed = createLocalControllerSeed(preferences);
+
+    startTransition(() => {
+      setPlannerData(nextSeed.plannerData);
+      setReviewFlowState(nextSeed.reviewFlowState);
+      setActiveView(nextSeed.activeView);
+      setSelectedDate(nextSeed.selectedDate);
+      setSelectedSlotId(nextSeed.selectedSlotId);
+      setSelectedWorkId(nextSeed.selectedWorkId);
+      setIsDetailPanelOpen(nextSeed.isDetailPanelOpen);
+      setRescheduleSuggestions({});
+      setRecentConsequences([]);
+      setImpactSummary(null);
+      setOperationError(null);
+      setPendingOperation(null);
+      setTodaySummary(
+        getTodayDecisionSummary(nextSeed.plannerData, nextSeed.plannerData.dataOperacional),
+      );
+      setShortHorizonSnapshot({
+        load: getShortHorizonLoad(nextSeed.plannerData, nextSeed.plannerData.dataOperacional),
+        pressurePoints: getUpcomingPressurePoints(nextSeed.plannerData, nextSeed.plannerData.dataOperacional),
+        tomorrow: getTomorrowPreview(nextSeed.plannerData, nextSeed.plannerData.dataOperacional),
+      });
+      setRescheduleReviewItems(
+        buildReviewItems({
+          data: nextSeed.plannerData,
+          referenceDate: nextSeed.plannerData.dataOperacional,
+          state: nextSeed.reviewFlowState,
+        }),
+      );
+      setSystemFeedback({
+        title: "Ambiente local restaurado",
+        detail: `A operação voltou para a base local ${preferences.localReferenceDate}.`,
+        tone: "success",
+        contextTag: {
+          label: "Seed local aplicada",
+          tone: "success",
+        },
+      });
+    });
+  };
+
+  const resetPreferences = () => {
+    const defaults = resetStoredPlannerPreferences();
+    setPreferences(defaults);
+    setIsDetailPanelOpen(defaults.defaultDetailPanelOpen);
+  };
+
   const shiftDate = (direction: -1 | 1) => {
     const candidate = addDays(selectedDate, direction);
     setSelectedDate(clampPlannerDate(candidate, plannerData.diasSemana));
@@ -241,6 +374,31 @@ export function usePlannerState(adapter?: PlannerAppPort) {
 
   const selectWork = (workId: string) => {
     setSelectedWorkId(workId);
+  };
+
+  const openGlobalSearchResult = (result: PlannerGlobalSearchResult) => {
+    startTransition(() => {
+      if (result.workId) {
+        setSelectedWorkId(result.workId);
+      }
+
+      if (result.kind === "dependency") {
+        setActiveView("blockings");
+        setSystemFeedback({
+          title: "Bloqueio localizado",
+          detail: result.title,
+          tone: "warning",
+          contextTag: {
+            label: "Busca global",
+            tone: "warning",
+          },
+        });
+      } else {
+        setActiveView("work-detail");
+      }
+
+      setGlobalSearchQuery("");
+    });
   };
 
   const navigateSlots = (direction: -1 | 1) => {
@@ -591,14 +749,20 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     impactSummary,
     pendingOperation,
     operationError,
+    preferences,
+    globalSearchQuery,
+    globalSearchResults,
+    isRemoteMode,
     isOperationPending: Boolean(pendingOperation),
     rescheduleReviewItems,
     setWeekFilters,
+    setGlobalSearchQuery,
     navigate,
     shiftDate,
     selectSlot,
     selectWork,
     setSelectedDate,
+    setDetailPanelOpen: setIsDetailPanelOpen,
     startBlock,
     completeBlock,
     markBlockPartial,
@@ -620,6 +784,10 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     ignoreRescheduleReview,
     retryLastOperation,
     dismissOperationError,
+    updatePreferences,
+    resetLocalWorkspace,
+    resetPreferences,
+    openGlobalSearchResult,
     getTodaySummary: () => todaySummary,
     getShortHorizonSnapshot: () => shortHorizonSnapshot,
   };

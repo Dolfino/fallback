@@ -4,11 +4,14 @@ import { Topbar } from "./Topbar";
 import type { AppView } from "../../types/ui";
 import type { SystemFeedback } from "../../types/domain";
 import type { PlannerAppOperationError, PlannerAppOperationKind } from "../../application/plannerAppContracts";
+import type { PlannerGlobalSearchResult } from "../../domain/plannerSearch";
 
 interface AppShellProps {
   activeView: AppView;
   currentDateLabel: string;
   feedback: SystemFeedback | null;
+  searchQuery: string;
+  searchResults: PlannerGlobalSearchResult[];
   operationState?: {
     pending?: {
       kind: PlannerAppOperationKind;
@@ -18,6 +21,8 @@ interface AppShellProps {
   shortcutHint?: string;
   onNavigate: (view: AppView) => void;
   onPrimaryAction: (view: "new-work" | "requests") => void;
+  onSearchQueryChange: (value: string) => void;
+  onSearchResultOpen: (result: PlannerGlobalSearchResult) => void;
   onShiftDate: (direction: -1 | 1) => void;
   onRetryOperation?: () => void;
   onDismissOperationError?: () => void;
@@ -28,10 +33,14 @@ export function AppShell({
   activeView,
   currentDateLabel,
   feedback,
+  searchQuery,
+  searchResults,
   operationState,
   shortcutHint,
   onNavigate,
   onPrimaryAction,
+  onSearchQueryChange,
+  onSearchResultOpen,
   onShiftDate,
   onRetryOperation,
   onDismissOperationError,
@@ -44,9 +53,13 @@ export function AppShell({
         <Topbar
           currentDateLabel={currentDateLabel}
           feedback={feedback}
+          searchQuery={searchQuery}
+          searchResults={searchResults}
           operationState={operationState}
           onDismissOperationError={onDismissOperationError}
           onPrimaryAction={onPrimaryAction}
+          onSearchQueryChange={onSearchQueryChange}
+          onSearchResultOpen={onSearchResultOpen}
           onRetryOperation={onRetryOperation}
           onShiftDate={onShiftDate}
           shortcutHint={shortcutHint}

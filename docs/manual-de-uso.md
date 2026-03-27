@@ -68,6 +68,7 @@ As páginas principais são:
 No topo você encontra:
 - data operacional atual
 - navegação entre dias
+- busca global por trabalho, cliente/projeto e bloqueio
 - feedback operacional curto
 - botões `Nova demanda` e `Novo trabalho`
 - atalhos visíveis quando a tela suporta teclado
@@ -143,7 +144,18 @@ Na fila de entrada, a busca filtra por:
 - solicitante
 - área
 
-### 6. Tela Bloqueios
+### 9. Configurações
+Use `Configurações` para controlar preferências operacionais do ambiente.
+
+Hoje você pode ajustar:
+- tela inicial preferida
+- data base do modo local
+- persistência local no navegador
+- abertura padrão do painel lateral
+
+No modo local, também é possível restaurar a seed configurada imediatamente.
+
+### 10. Tela Bloqueios
 Use `Bloqueios` para acompanhar dependências abertas.
 
 Você pode:
@@ -156,7 +168,7 @@ Políticas disponíveis hoje:
 - `manter_reserva`
 - `liberar_slots_futuros`
 
-### 7. Tela Capacidade
+### 11. Tela Capacidade
 Use `Capacidade` para ler a capacidade livre por dia e simular encaixe.
 
 Ela mostra:
@@ -165,7 +177,7 @@ Ela mostra:
 - simulador rápido de novo trabalho
 - busca por dia ou data
 
-### 8. Fechamento do Dia
+### 12. Fechamento do Dia
 Use `Fechamento do Dia` para encerrar a operação diária.
 
 Essa tela ajuda a responder:
@@ -176,7 +188,7 @@ Essa tela ajuda a responder:
 - como amanhã começa
 - quais políticas de dependência já afetaram o horizonte curto
 
-### 9. Novo trabalho
+### 13. Novo trabalho
 Use `Novo trabalho` para cadastrar um trabalho novo com regras operacionais.
 
 O cadastro aceita:
@@ -192,7 +204,7 @@ O cadastro aceita:
 
 As subtarefas entram como etapas internas do trabalho. Elas aparecem no detalhe do trabalho, mas não poluem a timeline principal.
 
-### 10. Detalhe do trabalho
+### 14. Detalhe do trabalho
 Ao abrir um trabalho, você vê:
 - cabeçalho com estado e progresso
 - blocos do trabalho

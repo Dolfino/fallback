@@ -36,7 +36,7 @@ function renderPage(controller: ReturnType<typeof usePlannerState>) {
     case "work-detail":
       return <WorkDetailPage controller={controller} />;
     case "settings":
-      return <SettingsPage />;
+      return <SettingsPage controller={controller} />;
     default:
       return null;
   }
@@ -57,6 +57,8 @@ export default function App() {
       activeView={controller.activeView}
       currentDateLabel={currentDateLabel}
       feedback={controller.systemFeedback}
+      searchQuery={controller.globalSearchQuery}
+      searchResults={controller.globalSearchResults}
       operationState={{
         pending: controller.pendingOperation,
         error: controller.operationError,
@@ -64,6 +66,8 @@ export default function App() {
       onDismissOperationError={controller.dismissOperationError}
       onNavigate={controller.navigate}
       onPrimaryAction={(view) => controller.navigate(view)}
+      onSearchQueryChange={controller.setGlobalSearchQuery}
+      onSearchResultOpen={controller.openGlobalSearchResult}
       onRetryOperation={controller.retryLastOperation}
       onShiftDate={controller.shiftDate}
       shortcutHint={shortcutHint}

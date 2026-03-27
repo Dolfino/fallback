@@ -13,8 +13,17 @@ export type AppView =
   | "work-detail"
   | "settings";
 
+export type PlannerStartupView = Exclude<AppView, "new-work" | "work-detail">;
+
 export interface WeekFilters {
   prioridade: Prioridade | "todas";
   status: SlotStatus | "todos";
   apenasRisco: boolean;
+}
+
+export interface PlannerUserPreferences {
+  startupView: PlannerStartupView;
+  persistLocalState: boolean;
+  localReferenceDate: string;
+  defaultDetailPanelOpen: boolean;
 }

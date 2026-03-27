@@ -160,6 +160,7 @@ export function createPlannerRemoteAdapter(
   });
 
   return {
+    mode: "remote",
     async executeCommand<K extends ExecutePlannerCommandRequest["command"]>(
       request: ExecutePlannerCommandRequest<K>,
     ): Promise<PlannerAppOperationResponse> {

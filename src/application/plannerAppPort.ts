@@ -21,6 +21,7 @@ import type {
 import type { TodayDecisionSummary } from "../data/selectors";
 
 export interface PlannerAppPort {
+  mode: "local" | "remote";
   executeCommand<K extends ExecutePlannerCommandRequest["command"]>(
     request: ExecutePlannerCommandRequest<K>,
   ): Promise<PlannerAppOperationResponse>;
