@@ -145,7 +145,7 @@ export function SettingsPage({ controller }: { controller: PlannerController }) 
         <section className="rounded-[32px] border border-black/5 bg-white p-5 shadow-panel">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Busca global</p>
           <p className="mt-3 text-sm text-slate-600">
-            A barra superior agora encontra trabalhos, clientes/projetos e bloqueios ativos, abrindo o contexto certo a partir do topo da aplicação.
+            A barra superior encontra trabalhos, clientes/projetos, solicitações, agendas e bloqueios, abrindo o contexto certo sem sair da tela atual.
           </p>
         </section>
       </aside>

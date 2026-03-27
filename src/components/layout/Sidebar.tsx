@@ -5,6 +5,7 @@ import {
   Gauge,
   LayoutDashboard,
   LockKeyhole,
+  PanelLeftClose,
   Settings,
   Sparkles,
   SquareKanban,
@@ -15,7 +16,9 @@ import { cx } from "../../utils/cx";
 
 interface SidebarProps {
   activeView: AppView;
+  isOpen: boolean;
   onNavigate: (view: AppView) => void;
+  onClose: () => void;
 }
 
 const items: Array<{ id: AppView; label: string; icon: LucideIcon }> = [
@@ -30,13 +33,26 @@ const items: Array<{ id: AppView; label: string; icon: LucideIcon }> = [
   { id: "settings", label: "Configurações", icon: Settings },
 ];
 
-export function Sidebar({ activeView, onNavigate }: SidebarProps) {
+export function Sidebar({ activeView, isOpen, onNavigate, onClose }: SidebarProps) {
   return (
-    <aside className="flex w-[280px] shrink-0 flex-col border-r border-white/10 bg-shell px-5 py-6 text-white">
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 flex w-[280px] shrink-0 flex-col border-r border-white/10 bg-shell px-5 py-6 text-white shadow-2xl transition-transform duration-200 ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       <div className="mb-8 space-y-2">
-        <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.24em] text-white/60">
-          Planejamento operacional
-        </span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.24em] text-white/60">
+            Planejamento operacional
+          </span>
+          <button
+            className="rounded-2xl border border-white/10 bg-white/5 p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+            onClick={onClose}
+            type="button"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Centro de controle</h1>
           <p className="mt-2 text-sm text-white/60">
@@ -59,7 +75,10 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
                   ? "bg-white text-shell shadow-lg"
                   : "text-white/70 hover:bg-white/5 hover:text-white",
               )}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => {
+                onNavigate(item.id);
+                onClose();
+              }}
               type="button"
             >
               <Icon className="h-4 w-4" />

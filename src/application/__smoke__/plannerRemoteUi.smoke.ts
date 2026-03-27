@@ -1,5 +1,7 @@
-import { access } from "node:fs/promises";
+import { access, mkdtemp, rm } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { FastifyInstance } from "fastify";
@@ -49,6 +51,53 @@ async function resolveBrowserBinary() {
   throw new Error(
     "Nenhum navegador compatível foi encontrado. Defina PLANNER_UI_SMOKE_BROWSER_BIN ou instale Chromium.",
   );
+}
+
+async function dumpDomWithBrowser(browserBinary: string, frontendUrl: string) {
+  const userDataDir = await mkdtemp(join(tmpdir(), "planner-ui-smoke-"));
+
+  try {
+    const { stdout } = await execFileAsync(
+      browserBinary,
+      [
+        "--headless",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+        "--disable-software-rasterizer",
+        "--no-sandbox",
+        `--user-data-dir=${userDataDir}`,
+        "--run-all-compositor-stages-before-draw",
+        "--virtual-time-budget=8000",
+        "--dump-dom",
+        frontendUrl,
+      ],
+      {
+        env: process.env,
+        maxBuffer: 12 * 1024 * 1024,
+        timeout: 20_000,
+      },
+    );
+
+    return stdout;
+  } catch (error) {
+    if (error instanceof Error && "stderr" in error) {
+      const failedExecution = error as Error & { stderr?: string; stdout?: string; code?: number | null };
+      throw new Error(
+        [
+          `Falha ao executar o navegador de smoke test: ${browserBinary}`,
+          failedExecution.code !== undefined ? `exit code: ${failedExecution.code ?? "null"}` : null,
+          failedExecution.stderr ? `stderr: ${failedExecution.stderr.trim()}` : null,
+          failedExecution.stdout ? `stdout: ${failedExecution.stdout.trim()}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+    }
+
+    throw error;
+  } finally {
+    await rm(userDataDir, { recursive: true, force: true });
+  }
 }
 
 function restoreEnvVar(name: "VITE_PLANNER_ADAPTER" | "VITE_PLANNER_API_BASE_URL" | "VITE_PLANNER_API_TIMEOUT_MS", value: string | undefined) {
@@ -121,22 +170,7 @@ describe("planner remote UI smoke", () => {
 
     const browserBinary = await resolveBrowserBinary();
     const frontendUrl = getServerUrl(viteServer);
-    const { stdout } = await execFileAsync(
-      browserBinary,
-      [
-        "--headless",
-        "--disable-gpu",
-        "--run-all-compositor-stages-before-draw",
-        "--virtual-time-budget=8000",
-        "--dump-dom",
-        frontendUrl,
-      ],
-      {
-        env: process.env,
-        maxBuffer: 12 * 1024 * 1024,
-        timeout: 20_000,
-      },
-    );
+    const stdout = await dumpDomWithBrowser(browserBinary, frontendUrl);
 
     expect(stdout).toContain("Centro de controle");
     expect(requestedUrls.some((url) => url.includes("/api/planner/days/") && url.includes("/summary"))).toBe(true);

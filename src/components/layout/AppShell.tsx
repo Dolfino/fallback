@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import type { AppView } from "../../types/ui";
@@ -46,21 +46,50 @@ export function AppShell({
   onDismissOperationError,
   children,
 }: AppShellProps) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
-    <div className="flex min-h-screen bg-canvas text-ink">
-      <Sidebar activeView={activeView} onNavigate={onNavigate} />
+    <div className="relative flex min-h-screen bg-canvas text-ink">
+      {isSidebarOpen ? (
+        <button
+          aria-label="Fechar menu lateral"
+          className="fixed inset-0 z-30 bg-shell/30 backdrop-blur-[2px]"
+          onClick={() => setIsSidebarOpen(false)}
+          type="button"
+        />
+      ) : null}
+
+      <Sidebar
+        activeView={activeView}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onNavigate={onNavigate}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           currentDateLabel={currentDateLabel}
           feedback={feedback}
           searchQuery={searchQuery}
           searchResults={searchResults}
+          sidebarOpen={isSidebarOpen}
           operationState={operationState}
           onDismissOperationError={onDismissOperationError}
           onPrimaryAction={onPrimaryAction}
           onSearchQueryChange={onSearchQueryChange}
           onSearchResultOpen={onSearchResultOpen}
           onRetryOperation={onRetryOperation}
+          onToggleSidebar={() => setIsSidebarOpen((current) => !current)}
           onShiftDate={onShiftDate}
           shortcutHint={shortcutHint}
         />

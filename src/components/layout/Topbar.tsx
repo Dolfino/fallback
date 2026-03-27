@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, Plus, Search } from "lucide-react";
 import type { SystemFeedback } from "../../types/domain";
 import type { PlannerAppOperationError, PlannerAppOperationKind } from "../../application/plannerAppContracts";
 import type { PlannerGlobalSearchResult } from "../../domain/plannerSearch";
@@ -9,6 +9,7 @@ interface TopbarProps {
   feedback: SystemFeedback | null;
   searchQuery: string;
   searchResults: PlannerGlobalSearchResult[];
+  sidebarOpen: boolean;
   operationState?: {
     pending?: {
       kind: PlannerAppOperationKind;
@@ -16,6 +17,7 @@ interface TopbarProps {
     error?: PlannerAppOperationError | null;
   };
   shortcutHint?: string;
+  onToggleSidebar: () => void;
   onShiftDate: (direction: -1 | 1) => void;
   onPrimaryAction: (view: "new-work" | "requests") => void;
   onSearchQueryChange: (value: string) => void;
@@ -29,8 +31,10 @@ export function Topbar({
   feedback,
   searchQuery,
   searchResults,
+  sidebarOpen,
   operationState,
   shortcutHint,
+  onToggleSidebar,
   onShiftDate,
   onPrimaryAction,
   onSearchQueryChange,
@@ -80,6 +84,15 @@ export function Topbar({
     <header className="border-b border-black/5 bg-panel/80 px-6 py-4 backdrop-blur">
       <div className="flex items-center justify-between gap-6">
         <div className="flex items-center gap-4">
+          <button
+            aria-label={sidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
+            className="rounded-2xl border border-slate-200 bg-white p-3 text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+            onClick={onToggleSidebar}
+            type="button"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Operação ativa</p>
             <h2 className="text-xl font-semibold tracking-tight">{currentDateLabel}</h2>
@@ -124,7 +137,7 @@ export function Topbar({
                     setIsSearchActive(false);
                   }
                 }}
-                placeholder="Buscar trabalho, cliente ou bloqueio"
+                placeholder="Buscar trabalho, solicitação, agenda ou bloqueio"
                 type="search"
                 value={searchQuery}
               />
