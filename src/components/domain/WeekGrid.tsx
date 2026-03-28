@@ -27,12 +27,13 @@ interface WeekGridProps {
 
 export function WeekGrid({ rows, selectedKey, onSelectCell }: WeekGridProps) {
   const weekDates = rows[0]?.cells.map((cell) => cell.date) ?? [];
+  const gridTemplateColumns = `160px repeat(${Math.max(weekDates.length, 1)}, minmax(160px, 1fr))`;
 
   return (
     <section className="min-h-0 rounded-[32px] border border-black/5 bg-panel p-5 shadow-panel">
       <div className="mb-5 flex items-end justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">Semana operacional</p>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">Horizonte operacional</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
             Grade de capacidade por agenda
           </h2>
@@ -41,7 +42,7 @@ export function WeekGrid({ rows, selectedKey, onSelectCell }: WeekGridProps) {
       </div>
 
       <div className="scrollbar-thin overflow-x-auto">
-        <div className="grid min-w-[980px] grid-cols-[160px_repeat(5,minmax(160px,1fr))] gap-3">
+        <div className="grid min-w-max gap-3" style={{ gridTemplateColumns }}>
           <div />
           {weekDates.map((date) => (
             <div

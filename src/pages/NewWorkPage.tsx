@@ -35,7 +35,7 @@ export function NewWorkPage({ controller }: { controller: PlannerController }) {
       </div>
 
       <div className="scrollbar-thin space-y-5 overflow-y-auto">
-        <SummaryCard label="Capacidade livre na semana" meta="sem proteção" value={capacity.livreLabel} />
+        <SummaryCard label="Capacidade livre no horizonte" meta="sem proteção" value={capacity.livreLabel} />
         <SummaryCard label="Capacidade planejável" meta="reservas já descontadas" value={capacity.planejavelLabel} />
         <section className="rounded-[32px] border border-black/5 bg-white p-5 shadow-panel">
           <h3 className="text-lg font-semibold tracking-tight text-slate-900">Leitura rápida de agenda</h3>

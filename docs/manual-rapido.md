@@ -39,7 +39,7 @@ Esse smoke test sobe backend e frontend temporários, abre a aplicação em nave
 
 ## Navegação principal
 - `Hoje`: centro de controle do dia
-- `Semana`: grade semanal por slots
+- `Semana`: grade semanal por slots a partir da data em foco
 - `Agendas`: visão por agenda/horário
 - `Trabalhos`: carteira de trabalhos
 - `Solicitações`: fila de entrada
@@ -52,6 +52,10 @@ Esse smoke test sobe backend e frontend temporários, abre a aplicação em nave
 2. Veja `Próximo foco`.
 3. Selecione o slot sugerido.
 4. Use o painel lateral para agir.
+
+Ao abrir o sistema:
+- em dia útil, o foco inicial cai no dia atual
+- no fim de semana, o foco inicial cai no próximo dia útil disponível no horizonte
 
 ## Ações principais
 
@@ -73,6 +77,8 @@ Puxa um bloco futuro para um slot livre.
 ### Remarcar
 Move uma alocação para outra data ou slot.
 
+Quando houver revisão assistida disponível, `Remarcar` usa primeiro a melhor sugestão calculada pelo sistema, inclusive para datas da semana seguinte.
+
 ## Revisão assistida
 Quando o sistema precisa da sua decisão para remarcar, ele mostra:
 - opção sugerida
@@ -92,6 +98,8 @@ Vá para `Hoje`.
 ### Quer enxergar a semana inteira?
 Vá para `Semana`.
 
+A grade semanal acompanha a data em foco. Se o sistema estiver aberto em `30/03`, a visão semanal começa em `30/03` e não volta para a semana já encerrada.
+
 ### Quer ler as agendas por horário?
 Vá para `Agendas`.
 
@@ -109,6 +117,12 @@ Vá para `Capacidade`.
 
 ### Quer encerrar o dia e preparar amanhã?
 Vá para `Fechamento do Dia`.
+
+Nessa tela você já pode:
+- replanejar automaticamente as pendências do dia
+- trazer pendências anteriores para o horizonte atual
+- revisar remarcações pendentes
+- confirmar o fechamento operacional do dia
 
 ## Novo trabalho
 Ao criar um trabalho, você pode informar:

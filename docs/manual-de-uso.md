@@ -73,6 +73,10 @@ No topo você encontra:
 - botões `Nova demanda` e `Novo trabalho`
 - atalhos visíveis quando a tela suporta teclado
 
+Regra de foco inicial:
+- em dia útil, a aplicação abre no dia operacional atual
+- no fim de semana, a aplicação abre no próximo dia útil disponível no horizonte carregado
+
 ## Fluxos principais
 
 ### 1. Tela Hoje
@@ -102,6 +106,8 @@ Ela permite:
 - restringir para trabalhos em risco
 - selecionar um slot da semana
 - abrir o detalhe lateral do item selecionado
+
+A grade semanal segue a data em foco. Quando a operação estiver em `30/03`, por exemplo, a visão semanal começa em `30/03` e mostra o horizonte útil restante, sem voltar para os dias já encerrados.
 
 ### 3. Tela Agendas
 Use `Agendas` para ler os trabalhos por janela de agenda.
@@ -187,6 +193,12 @@ Essa tela ajuda a responder:
 - o que precisa voltar para agenda
 - como amanhã começa
 - quais políticas de dependência já afetaram o horizonte curto
+
+A tela também permite:
+- `Replanejar automaticamente`: redistribui pendências elegíveis do dia no próximo dia útil disponível
+- `Trazer pendências anteriores`: carrega blocos pendentes de dias anteriores para o horizonte atual
+- `Revisar remarcações`: leva você até a fila de revisão assistida pendente
+- `Confirmar fechamento`: registra o fechamento operacional do dia e avança o foco para o próximo dia útil
 
 ### 13. Novo trabalho
 Use `Novo trabalho` para cadastrar um trabalho novo com regras operacionais.
@@ -383,11 +395,15 @@ Abre dependência e coloca o item em bloqueio operacional.
 ### Remarcar
 Move a alocação para outro slot ou outra data.
 
+Quando houver revisão assistida disponível, a ação de remarcação usa primeiro a melhor sugestão calculada pelo sistema. Essas sugestões podem incluir datas da semana seguinte quando o restante da semana atual já estiver saturado.
+
 ### Antecipar
 Puxa um bloco futuro para um slot livre elegível.
 
 ### Replanejar automaticamente
 No fechamento ou em contextos operacionais, o sistema pode remanejar pendências do dia para o próximo dia útil.
+
+Quando houver pendência acumulada de dias anteriores, o fechamento também pode trazer esses blocos para o horizonte atual. O movimento é feito por bloco/alocação, mas a leitura continua consolidada por trabalho.
 
 ## Revisão assistida
 Quando uma remarcação precisa de validação humana, a interface mostra:
@@ -395,6 +411,8 @@ Quando uma remarcação precisa de validação humana, a interface mostra:
 - alternativas simples
 - tradeoff curto
 - aceite, adiamento ou ignorar temporariamente
+
+As alternativas de remarcação podem cair na próxima semana quando o horizonte restante da semana atual já não comporta o item sem abrir conflito operacional novo.
 
 Exemplos de tradeoff:
 - `Preserva amanhã`

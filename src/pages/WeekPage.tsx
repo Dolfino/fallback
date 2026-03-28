@@ -1,6 +1,7 @@
 import {
   getBlockingItems,
   getCapacitySummary,
+  getRemainingHorizonDates,
   getSuggestionsForSlot,
   getSummaryForDate,
   getTimelineForDate,
@@ -14,8 +15,9 @@ import { SummaryCard } from "../components/ui/SummaryCard";
 import { WorkItemCard } from "../components/domain/WorkItemCard";
 
 export function WeekPage({ controller }: { controller: PlannerController }) {
-  const rows = getWeekMatrix(controller.plannerData, controller.weekFilters);
-  const capacity = getCapacitySummary(controller.plannerData);
+  const visibleDates = getRemainingHorizonDates(controller.plannerData, controller.selectedDate);
+  const rows = getWeekMatrix(controller.plannerData, controller.weekFilters, visibleDates);
+  const capacity = getCapacitySummary(controller.plannerData, visibleDates);
   const selectedTimeline = getTimelineForDate(controller.plannerData, controller.selectedDate);
   const selectedItem = selectedTimeline.find((item) => item.slot.id === controller.selectedSlotId);
   const history = controller.plannerData.registros.filter(
@@ -84,7 +86,7 @@ export function WeekPage({ controller }: { controller: PlannerController }) {
           </div>
         </section>
 
-        <SummaryCard label="Capacidade livre" meta="semana atual" value={capacity.livreLabel} />
+        <SummaryCard label="Capacidade livre" meta="horizonte visível" value={capacity.livreLabel} />
         <SummaryCard label="Capacidade ocupada" meta="blocos já comprometidos" value={capacity.ocupadosLabel} />
 
         <section className="space-y-4">

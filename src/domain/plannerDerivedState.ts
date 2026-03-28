@@ -15,6 +15,31 @@ export function clampPlannerDate(date: string, allowedDates: string[]) {
   return allowedDates[0];
 }
 
+export function shiftPlannerDate(currentDate: string, direction: -1 | 1, allowedDates: string[]) {
+  const currentIndex = allowedDates.findIndex((item) => item === currentDate);
+
+  if (currentIndex === -1) {
+    return clampPlannerDate(currentDate, allowedDates);
+  }
+
+  const nextIndex = Math.min(Math.max(currentIndex + direction, 0), allowedDates.length - 1);
+  return allowedDates[nextIndex];
+}
+
+export function clampPlannerDateForward(date: string, allowedDates: string[]) {
+  if (!allowedDates.length) {
+    return date;
+  }
+
+  const exact = allowedDates.find((item) => item === date);
+  if (exact) {
+    return exact;
+  }
+
+  const nextAvailable = allowedDates.find((item) => item > date);
+  return nextAvailable ?? allowedDates[allowedDates.length - 1];
+}
+
 export function getNextFreeSlot(data: PlannerData, date: string): Slot | undefined {
   const usedSlots = new Set(
     data.alocacoes.filter((item) => item.dataPlanejada === date).map((item) => item.slotId),

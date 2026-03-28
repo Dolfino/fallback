@@ -1,5 +1,6 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import {
+  getRemainingHorizonDates,
   getSuggestionsForSlot,
   getTimelineForDate,
 } from "../data/selectors";
@@ -17,16 +18,17 @@ export function AgendasPage({ controller }: { controller: PlannerController }) {
   const [sortMode, setSortMode] = useState<"time" | "priority" | "risk">("time");
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
+  const visibleDates = getRemainingHorizonDates(controller.plannerData, controller.selectedDate);
   const agendaEntries = useMemo(
     () =>
-      (scope === "day" ? [controller.selectedDate] : controller.plannerData.diasSemana).flatMap((date) =>
+      (scope === "day" ? [controller.selectedDate] : visibleDates).flatMap((date) =>
         getTimelineForDate(controller.plannerData, date).map((item) => ({
           date,
           item,
           suggestions: getSuggestionsForSlot(controller.plannerData, date, item.slot.id),
         })),
       ),
-    [controller.plannerData, controller.selectedDate, scope],
+    [controller.plannerData, controller.selectedDate, scope, visibleDates],
   );
   const filteredEntries = useMemo(
     () =>
@@ -137,7 +139,7 @@ export function AgendasPage({ controller }: { controller: PlannerController }) {
       Boolean(entry.item.dependencia) ||
       Boolean(entry.item.trabalho?.emRisco),
   ).length;
-  const scopeDates = scope === "day" ? 1 : controller.plannerData.diasSemana.length;
+  const scopeDates = scope === "day" ? 1 : visibleDates.length;
   const freeCapacityLabel = formatMinutes(free * 25);
   const filterLabels = {
     all: "todas",
@@ -158,7 +160,7 @@ export function AgendasPage({ controller }: { controller: PlannerController }) {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                {scope === "day" ? "Agendas do dia" : "Agendas da semana"}
+                {scope === "day" ? "Agendas do dia" : "Agendas do horizonte"}
               </p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Trabalhos por agenda</h2>
               <p className="mt-2 text-sm text-slate-500">
@@ -183,7 +185,7 @@ export function AgendasPage({ controller }: { controller: PlannerController }) {
                 onClick={() => setScope("week")}
                 type="button"
               >
-                Semana
+                Horizonte
               </button>
             </div>
           </div>
@@ -193,12 +195,12 @@ export function AgendasPage({ controller }: { controller: PlannerController }) {
             <SummaryCard label="Livres" meta="janelas utilizáveis" value={String(free)} />
             <SummaryCard
               label="Pendentes"
-              meta={scope === "day" ? "pedem avanço hoje" : "pedem avanço na semana"}
+              meta={scope === "day" ? "pedem avanço hoje" : "pedem avanço no horizonte"}
               value={String(pending)}
             />
             <SummaryCard
               label="Capacidade livre"
-              meta={scopeDates === 1 ? "na data selecionada" : "no horizonte da semana"}
+              meta={scopeDates === 1 ? "na data selecionada" : "no horizonte visível"}
               value={freeCapacityLabel}
             />
           </div>

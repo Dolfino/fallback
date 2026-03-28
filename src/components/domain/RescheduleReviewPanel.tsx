@@ -108,7 +108,7 @@ export function RescheduleReviewPanel({
                     </>
                   ) : (
                     <p className="mt-2 text-sm text-slate-500">
-                      Sem encaixe simples no horizonte curto.
+                      Sem encaixe simples no horizonte visível.
                     </p>
                   )}
                 </div>
@@ -142,7 +142,7 @@ export function RescheduleReviewPanel({
 
               {item.alternatives.length ? (
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {item.alternatives.slice(0, 3).map((target, index) => (
+                  {item.alternatives.slice(0, 5).map((target, index) => (
                     <button
                       key={`${item.allocationId}-${target.slotId}-${target.date}`}
                       className={`rounded-2xl border px-3 py-2 text-sm font-medium ${
@@ -153,7 +153,9 @@ export function RescheduleReviewPanel({
                       onClick={() => onAccept(item.allocationId, target)}
                       type="button"
                     >
-                      {target.isSuggested ? "Aceitar sugerido" : `Trocar para ${target.slotLabel}`}
+                      {target.isSuggested
+                        ? "Aceitar sugerido"
+                        : `Trocar para ${target.slotLabel} • ${formatDateShort(target.date)}`}
                     </button>
                   ))}
                 </div>

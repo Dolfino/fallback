@@ -7,7 +7,7 @@ import type {
 } from "../types/domain";
 import type { PlannerData } from "../types/planner";
 import { addDays } from "../utils/date";
-import { clampPlannerDate, getNextFreeSlot } from "./plannerDerivedState";
+import { clampPlannerDate, clampPlannerDateForward, getNextFreeSlot } from "./plannerDerivedState";
 
 function findAllocationBundle(data: PlannerData, allocationId: string) {
   const allocation = data.alocacoes.find((item) => item.id === allocationId);
@@ -52,6 +52,20 @@ function moveAllocationToTarget(
         : bloco,
     ),
   };
+}
+
+function allocationStatusWeight(status: PlannerData["alocacoes"][number]["statusAlocacao"]) {
+  const weights = {
+    parcial: 0,
+    planejado: 1,
+    remarcado: 2,
+    antecipado: 3,
+    em_execucao: 4,
+    concluido: 5,
+    bloqueado: 6,
+  } as const;
+
+  return weights[status] ?? 99;
 }
 
 type CommandHandler<K extends PlannerCommandName> = (
@@ -205,11 +219,14 @@ const commandHandlers: {
       return null;
     }
 
-    const fallbackDate = clampPlannerDate(
+    const fallbackDate = clampPlannerDateForward(
       addDays(context.selectedDate, 1),
       context.plannerData.diasSemana,
     );
-    const targetDate = clampPlannerDate(payload.targetDate ?? fallbackDate, context.plannerData.diasSemana);
+    const targetDate = clampPlannerDateForward(
+      payload.targetDate ?? fallbackDate,
+      context.plannerData.diasSemana,
+    );
     const nextSlot =
       payload.targetSlotId
         ? context.plannerData.slots.find((slot) => slot.id === payload.targetSlotId)
@@ -281,6 +298,48 @@ const commandHandlers: {
       targetSlotId: payload.slotId,
     };
   },
+  confirm_day_closing(context) {
+    const pendingCount = context.plannerData.alocacoes.filter(
+      (item) =>
+        item.dataPlanejada === context.selectedDate &&
+        ["planejado", "em_execucao", "parcial", "remarcado", "antecipado"].includes(item.statusAlocacao),
+    ).length;
+    const blockedCount = context.plannerData.alocacoes.filter(
+      (item) => item.dataPlanejada === context.selectedDate && item.statusAlocacao === "bloqueado",
+    ).length;
+    const carryoverCount = context.plannerData.alocacoes.filter(
+      (item) =>
+        item.dataPlanejada < context.selectedDate &&
+        ["planejado", "parcial", "remarcado"].includes(item.statusAlocacao),
+    ).length;
+    const nextDate = clampPlannerDateForward(addDays(context.selectedDate, 1), context.plannerData.diasSemana);
+    const nextFocus = getNextFocus(context.plannerData, nextDate);
+    const fechamento = {
+      date: context.selectedDate,
+      confirmedAt: new Date().toISOString(),
+      pendingCount,
+      blockedCount,
+      carryoverCount,
+    };
+    const nextClosings = [
+      ...(context.plannerData.fechamentosOperacionais ?? []).filter((entry) => entry.date !== context.selectedDate),
+      fechamento,
+    ].sort((first, second) => first.date.localeCompare(second.date));
+
+    return {
+      command: "confirm_day_closing",
+      nextData: {
+        ...context.plannerData,
+        fechamentosOperacionais: nextClosings,
+      },
+      uiPatch: {
+        nextDate,
+        nextSlotId: nextFocus?.slot.id,
+        nextWorkId: nextFocus?.trabalho?.id,
+        openDetailPanel: true,
+      },
+    };
+  },
   toggle_detail_panel(context, payload) {
     return {
       command: "toggle_detail_panel",
@@ -308,7 +367,7 @@ const commandHandlers: {
     };
   },
   auto_replan_day(context) {
-    const targetDate = clampPlannerDate(
+    const targetDate = clampPlannerDateForward(
       addDays(context.selectedDate, 1),
       context.plannerData.diasSemana,
     );
@@ -366,6 +425,129 @@ const commandHandlers: {
         openDetailPanel: context.isDetailPanelOpen,
       },
       reviewAllocationIds: movedAllocationIds,
+    };
+  },
+  auto_replan_week(context) {
+    const targetDates = context.plannerData.diasSemana.filter((date) => date >= context.selectedDate);
+    const slotIndexById = new Map(context.plannerData.slots.map((slot, index) => [slot.id, index]));
+    const carryover = context.plannerData.alocacoes
+      .filter(
+        (item) =>
+          item.dataPlanejada < context.selectedDate &&
+          ["planejado", "parcial", "remarcado"].includes(item.statusAlocacao),
+      )
+      .sort((first, second) => {
+        const statusDiff =
+          allocationStatusWeight(first.statusAlocacao) - allocationStatusWeight(second.statusAlocacao);
+        if (statusDiff !== 0) {
+          return statusDiff;
+        }
+
+        const dateDiff = first.dataPlanejada.localeCompare(second.dataPlanejada);
+        if (dateDiff !== 0) {
+          return dateDiff;
+        }
+
+        return (slotIndexById.get(first.slotId) ?? 0) - (slotIndexById.get(second.slotId) ?? 0);
+      });
+
+    if (!carryover.length || !targetDates.length) {
+      return null;
+    }
+
+    const usedSlotsByDate = new Map<string, Set<string>>();
+    targetDates.forEach((date) => {
+      usedSlotsByDate.set(
+        date,
+        new Set(
+          context.plannerData.alocacoes
+            .filter((item) => item.dataPlanejada === date)
+            .map((item) => item.slotId),
+        ),
+      );
+    });
+
+    const targetAssignments = new Map<string, { date: string; slotId: string }>();
+    const unresolvedAllocationIds: string[] = [];
+
+    for (const allocation of carryover) {
+      let assigned = false;
+
+      for (const date of targetDates) {
+        const usedSlots = usedSlotsByDate.get(date);
+        const nextSlot = context.plannerData.slots.find((slot) => !usedSlots?.has(slot.id));
+
+        if (!usedSlots || !nextSlot) {
+          continue;
+        }
+
+        usedSlots.add(nextSlot.id);
+        targetAssignments.set(allocation.id, {
+          date,
+          slotId: nextSlot.id,
+        });
+        assigned = true;
+        break;
+      }
+
+      if (!assigned) {
+        unresolvedAllocationIds.push(allocation.id);
+      }
+    }
+
+    if (!targetAssignments.size) {
+      return null;
+    }
+
+    const movedAllocationIds = [...targetAssignments.keys()];
+    const nextData: PlannerData = {
+      ...context.plannerData,
+      alocacoes: context.plannerData.alocacoes.map((allocation) => {
+        const target = targetAssignments.get(allocation.id);
+        if (!target) {
+          return allocation;
+        }
+
+        return {
+          ...allocation,
+          dataPlanejada: target.date,
+          slotId: target.slotId,
+          statusAlocacao: "remarcado",
+          origemAlocacao: "replanejamento",
+        };
+      }),
+      blocos: context.plannerData.blocos.map((block) =>
+        movedAllocationIds.some((allocationId) =>
+          context.plannerData.alocacoes.find((allocation) => allocation.id === allocationId)?.blocoId === block.id,
+        )
+          ? {
+              ...block,
+              foiRemarcado: true,
+              motivoRemanejamento: "Carregado da semana anterior na abertura do novo horizonte.",
+            }
+          : block,
+      ),
+    };
+
+    const firstMovedAllocationId = movedAllocationIds[0];
+    const firstMovedTarget = firstMovedAllocationId ? targetAssignments.get(firstMovedAllocationId) : undefined;
+    const firstMovedAllocation = firstMovedAllocationId
+      ? context.plannerData.alocacoes.find((allocation) => allocation.id === firstMovedAllocationId)
+      : undefined;
+    const firstMovedBlock = firstMovedAllocation
+      ? context.plannerData.blocos.find((block) => block.id === firstMovedAllocation.blocoId)
+      : undefined;
+
+    return {
+      command: "auto_replan_week",
+      nextData,
+      uiPatch: {
+        nextDate: context.selectedDate,
+        nextSlotId: firstMovedTarget?.slotId,
+        nextWorkId: firstMovedBlock?.trabalhoId,
+        openDetailPanel: context.isDetailPanelOpen,
+      },
+      reviewAllocationIds: [...movedAllocationIds, ...unresolvedAllocationIds],
     };
   },
 };

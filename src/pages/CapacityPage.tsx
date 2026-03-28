@@ -1,15 +1,16 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { CapacityPanel } from "../components/domain/CapacityPanel";
 import { ListControlsCard } from "../components/ui/ListControls";
-import { getCapacitySummary, getTimelineForDate } from "../data/selectors";
+import { getCapacitySummary, getRemainingHorizonDates, getTimelineForDate } from "../data/selectors";
 import type { PlannerController } from "../hooks/usePlannerState";
 import { formatDateLong, formatDateShort, formatWeekday } from "../utils/format";
 
 export function CapacityPage({ controller }: { controller: PlannerController }) {
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
-  const summary = getCapacitySummary(controller.plannerData);
-  const days = controller.plannerData.diasSemana.map((date) => {
+  const visibleDates = getRemainingHorizonDates(controller.plannerData, controller.selectedDate);
+  const summary = getCapacitySummary(controller.plannerData, visibleDates);
+  const days = visibleDates.map((date) => {
     const timeline = getTimelineForDate(controller.plannerData, date);
     return {
       date,

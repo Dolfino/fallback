@@ -15,12 +15,15 @@ import type { PlannerData } from "../types/planner";
 import type { PlannerShortHorizonSnapshot } from "./plannerAppContracts";
 
 export const plannerApiRoutes = {
+  getStateSnapshot: () => "/api/planner/state",
   startBlock: (allocationId: string) => `/api/planner/blocks/${allocationId}/actions/start`,
   completeBlock: (allocationId: string) => `/api/planner/blocks/${allocationId}/actions/complete`,
   markBlockPartial: (allocationId: string) => `/api/planner/blocks/${allocationId}/actions/partial`,
   rescheduleBlock: (allocationId: string) => `/api/planner/blocks/${allocationId}/actions/reschedule`,
   pullForwardBlock: (allocationId: string) => `/api/planner/blocks/${allocationId}/actions/pull-forward`,
+  confirmDayClosing: (referenceDate: string) => `/api/planner/days/${referenceDate}/actions/confirm-close`,
   autoReplanDay: (referenceDate: string) => `/api/planner/days/${referenceDate}/actions/auto-replan`,
+  autoReplanWeek: (referenceDate: string) => `/api/planner/weeks/${referenceDate}/actions/auto-replan`,
   resolveReview: (allocationId: string) => `/api/planner/reviews/${allocationId}/resolution`,
   openDependency: () => "/api/planner/dependencies/open",
   resolveDependency: (dependencyId: string) => `/api/planner/dependencies/${dependencyId}/resolve`,
@@ -110,7 +113,15 @@ export interface PullForwardBlockHttpRequest {
   slotId: string;
 }
 
+export interface ConfirmDayClosingHttpRequest {
+  context: RemoteOperationContext;
+}
+
 export interface AutoReplanDayHttpRequest {
+  context: RemoteOperationContext;
+}
+
+export interface AutoReplanWeekHttpRequest {
   context: RemoteOperationContext;
 }
 
@@ -146,6 +157,11 @@ export interface CreateRequestHttpRequest {
 
 export interface DaySummaryHttpResponse {
   summary: TodayDecisionSummary;
+}
+
+export interface RemoteSnapshotHttpResponse {
+  plannerData: PlannerData;
+  reviewFlowState: ReviewFlowState;
 }
 
 export interface ShortHorizonHttpResponse {

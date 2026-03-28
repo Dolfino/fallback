@@ -1,9 +1,12 @@
 import { createMockPlannerData } from "../data/mockData";
+import { getTimelineForDate } from "../data/selectors";
+import { clampPlannerDateForward } from "../domain/plannerDerivedState";
 import { applyPlannerDerivedState } from "../domain/plannerDerivedState";
 import { createEmptyReviewState } from "../domain/plannerReviewFlow";
 import type { ReviewFlowState } from "../types/domain";
 import type { PlannerData } from "../types/planner";
 import type { AppView, PlannerStartupView, PlannerUserPreferences } from "../types/ui";
+import { getOperationalDate } from "../utils/date";
 
 const plannerPreferencesStorageKey = "planner.preferences.v1";
 const plannerLocalSnapshotStorageKey = "planner.local-snapshot.v1";
@@ -35,6 +38,46 @@ export interface PlannerLocalControllerSeed {
   selectedSlotId: string;
   selectedWorkId: string;
   isDetailPanelOpen: boolean;
+}
+
+export function getPlannerSelectionForDate(plannerData: PlannerData, selectedDate: string) {
+  const timeline = getTimelineForDate(plannerData, selectedDate);
+  const focusedItem =
+    timeline.find((item) =>
+      ["em_execucao", "planejado", "parcial", "remarcado", "antecipado"].includes(item.statusVisual),
+    ) ??
+    timeline.find((item) => item.alocacao) ??
+    timeline[0];
+
+  return {
+    selectedSlotId: focusedItem?.slot.id ?? plannerData.slots[0]?.id ?? "",
+    selectedWorkId: focusedItem?.bloco?.trabalhoId ?? plannerData.trabalhos[0]?.id ?? "",
+  };
+}
+
+export function getPlannerOperationalFocusDate(
+  plannerData: PlannerData,
+  now = new Date(),
+) {
+  return clampPlannerDateForward(getOperationalDate(now), plannerData.diasSemana);
+}
+
+export function alignControllerSeedToOperationalFocus(
+  seed: PlannerLocalControllerSeed,
+  now = new Date(),
+): PlannerLocalControllerSeed {
+  const selectedDate = getPlannerOperationalFocusDate(seed.plannerData, now);
+
+  if (selectedDate === seed.selectedDate) {
+    return seed;
+  }
+
+  const nextSelection = getPlannerSelectionForDate(seed.plannerData, selectedDate);
+  return {
+    ...seed,
+    selectedDate,
+    ...nextSelection,
+  };
 }
 
 function hasWindow() {
@@ -163,7 +206,7 @@ export function createLocalControllerSeed(
   );
   const plannerData = applyPlannerDerivedState(raw, raw.dataOperacional);
 
-  return {
+  return alignControllerSeedToOperationalFocus({
     plannerData,
     reviewFlowState: createEmptyReviewState(),
     activeView: preferences.startupView,
@@ -171,7 +214,7 @@ export function createLocalControllerSeed(
     selectedSlotId: "slot-2",
     selectedWorkId: "proposta-acme",
     isDetailPanelOpen: preferences.defaultDetailPanelOpen,
-  };
+  });
 }
 
 export function loadPlannerLocalSnapshot(): PlannerLocalControllerSeed | null {
@@ -190,7 +233,7 @@ export function loadPlannerLocalSnapshot(): PlannerLocalControllerSeed | null {
       return null;
     }
 
-    return {
+    return alignControllerSeedToOperationalFocus({
       plannerData: parsed.plannerData,
       reviewFlowState: parsed.reviewFlowState,
       activeView: parsed.activeView,
@@ -198,7 +241,7 @@ export function loadPlannerLocalSnapshot(): PlannerLocalControllerSeed | null {
       selectedSlotId: parsed.selectedSlotId,
       selectedWorkId: parsed.selectedWorkId,
       isDetailPanelOpen: parsed.isDetailPanelOpen,
-    };
+    });
   } catch {
     return null;
   }

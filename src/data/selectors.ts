@@ -154,6 +154,12 @@ export function getShortHorizonDates(data: PlannerData, referenceDate: string, c
   return data.diasSemana.slice(safeIndex, safeIndex + count);
 }
 
+export function getRemainingHorizonDates(data: PlannerData, referenceDate: string) {
+  const startIndex = data.diasSemana.findIndex((date) => date === referenceDate);
+  const safeIndex = startIndex >= 0 ? startIndex : 0;
+  return data.diasSemana.slice(safeIndex);
+}
+
 function priorityWeight(priority: Prioridade) {
   const weights: Record<Prioridade, number> = {
     baixa: 1,
@@ -509,12 +515,12 @@ export function getCapacitySummary(data: PlannerData, dates = data.diasSemana) {
   };
 }
 
-export function getWeekMatrix(data: PlannerData, filters: WeekFilters) {
+export function getWeekMatrix(data: PlannerData, filters: WeekFilters, dates = data.diasSemana) {
   const maps = buildMaps(data);
 
   return data.slots.map((slot) => ({
     slot,
-    cells: data.diasSemana.map((date) => {
+    cells: dates.map((date) => {
       const alocacao = data.alocacoes.find(
         (item) => item.dataPlanejada === date && item.slotId === slot.id,
       );
@@ -677,7 +683,7 @@ export function getNextUsefulOpenSlot(
   data: PlannerData,
   referenceDate: string,
 ): { date: string; slotId: string; slotLabel: string; suggestion?: SuggestionItem; rationale: string } | undefined {
-  const dates = getShortHorizonDates(data, referenceDate, 3);
+  const dates = getRemainingHorizonDates(data, referenceDate);
 
   for (const date of dates) {
     const timeline = getTimelineForDate(data, date);
@@ -735,6 +741,16 @@ export function deriveConsequencesFromTransition(params: {
   const beforeTomorrow = getTomorrowPreview(beforeData, referenceDate);
   const afterTomorrow = getTomorrowPreview(afterData, referenceDate);
   const consequences: PlannerConsequence[] = [];
+  const beforeCarryover = beforeData.alocacoes.filter(
+    (item) =>
+      item.dataPlanejada < referenceDate &&
+      ["planejado", "parcial", "remarcado"].includes(item.statusAlocacao),
+  ).length;
+  const afterCarryover = afterData.alocacoes.filter(
+    (item) =>
+      item.dataPlanejada < referenceDate &&
+      ["planejado", "parcial", "remarcado"].includes(item.statusAlocacao),
+  ).length;
 
   if (afterToday.proximoFoco?.slot.id !== beforeToday.proximoFoco?.slot.id && afterToday.proximoFoco) {
     consequences.push({
@@ -821,6 +837,17 @@ export function deriveConsequencesFromTransition(params: {
     });
   }
 
+  if (command === "confirm_day_closing") {
+    consequences.push({
+      id: `closing-${referenceDate}`,
+      type: "completion_progressed",
+      tone: "success",
+      title: "Fechamento confirmado",
+      detail: `O dia ${formatDateShort(referenceDate)} foi encerrado com o próximo foco já preparado.`,
+      date: referenceDate,
+    });
+  }
+
   if (command === "reschedule_block" || command === "auto_replan_day") {
     consequences.push({
       id: `tomorrow-${command}`,
@@ -829,6 +856,18 @@ export function deriveConsequencesFromTransition(params: {
       title: "Amanhã foi recarregado",
       detail: `${afterTomorrow.pendenciasRemarcadas.length} pendência${afterTomorrow.pendenciasRemarcadas.length === 1 ? "" : "s"} já entram no próximo dia.`,
       date: afterTomorrow.data,
+    });
+  }
+
+  if (command === "auto_replan_week") {
+    const movedCarryover = Math.max(beforeCarryover - afterCarryover, 0);
+    consequences.push({
+      id: "week-carryover",
+      type: "tomorrow_loaded",
+      tone: "warning",
+      title: "Nova semana carregada",
+      detail: `${movedCarryover} pendência${movedCarryover === 1 ? "" : "s"} anterior${movedCarryover === 1 ? "" : "es"} entrou${movedCarryover === 1 ? "" : "ram"} no novo horizonte.`,
+      date: referenceDate,
     });
   }
 
@@ -901,9 +940,11 @@ export function getImmediateImpactSummary(params: {
     block_allocation: "Bloqueio propagado para o curto prazo",
     reschedule_block: "Remarcação aplicada com menor impacto local",
     pull_forward_block: "Antecipação aplicada e fila adiantada",
+    confirm_day_closing: "Fechamento operacional confirmado",
     toggle_detail_panel: "Painel lateral alternado",
     select_next_focus: "Foco reordenado para a melhor continuidade",
     auto_replan_day: "Pendências redistribuídas para o próximo dia",
+    auto_replan_week: "Pendências anteriores redistribuídas para a nova semana",
   };
 
   return {

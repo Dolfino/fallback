@@ -47,6 +47,22 @@ describe("plannerRemoteAdapter contract", () => {
     }
   });
 
+  it("loads the persisted remote snapshot through the adapter", async () => {
+    const adapter = createPlannerRemoteAdapter({ baseUrl });
+    const snapshot = loadTestSnapshot(snapshotFilePath);
+
+    const response = await adapter.loadRemoteSnapshot({
+      meta: createRequestMeta(),
+      state: createStateSnapshot(snapshot),
+    });
+
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect(response.data.plannerData.diasSemana.length).toBeGreaterThanOrEqual(10);
+      expect(response.data.reviewFlowState.activeAllocationIds).toBeDefined();
+    }
+  });
+
   it("reads review items and reschedule suggestion through the remote adapter aliases", async () => {
     const adapter = createPlannerRemoteAdapter({ baseUrl });
     const snapshot = loadTestSnapshot(snapshotFilePath);
@@ -136,6 +152,51 @@ describe("plannerRemoteAdapter contract", () => {
         response.application.nextData?.alocacoes.find((entry) => entry.id === "aloc-3")?.statusAlocacao,
       ).toBe("remarcado");
       expect(response.application.impactSummary.headline).toContain("Pendências");
+    }
+  });
+
+  it("executes auto_replan_week through the remote adapter alias and brings carryover into the new week", async () => {
+    const adapter = createPlannerRemoteAdapter({ baseUrl });
+    const snapshot = loadTestSnapshot(snapshotFilePath);
+
+    const response = await adapter.executeCommand({
+      meta: createRequestMeta(),
+      state: createStateSnapshot(snapshot, {
+        selectedDate: "2026-03-30",
+      }),
+      command: "auto_replan_week",
+      payload: {},
+    });
+
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect(
+        response.application.nextData?.alocacoes.find((entry) => entry.id === "aloc-3")?.dataPlanejada,
+      ).toBe("2026-03-30");
+      expect(
+        response.application.nextData?.alocacoes.find((entry) => entry.id === "aloc-4")?.statusAlocacao,
+      ).toBe("bloqueado");
+      expect(response.application.impactSummary.headline).toContain("nova semana");
+    }
+  });
+
+  it("executes confirm_day_closing through the remote adapter alias", async () => {
+    const adapter = createPlannerRemoteAdapter({ baseUrl });
+    const snapshot = loadTestSnapshot(snapshotFilePath);
+
+    const response = await adapter.executeCommand({
+      meta: createRequestMeta(),
+      state: createStateSnapshot(snapshot),
+      command: "confirm_day_closing",
+      payload: {},
+    });
+
+    expect(response.ok).toBe(true);
+    if (response.ok) {
+      expect(
+        response.application.nextData?.fechamentosOperacionais?.some((entry) => entry.date === "2026-03-23"),
+      ).toBe(true);
+      expect(response.application.impactSummary.headline).toContain("Fechamento");
     }
   });
 

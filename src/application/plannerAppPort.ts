@@ -3,9 +3,11 @@ import type {
   CreatePlannerRequestRequest,
   CreatePlannerWorkRequest,
   ExecutePlannerCommandRequest,
+  LoadRemoteSnapshotQueryRequest,
   OpenPlannerDependencyRequest,
   PlannerAppOperationResponse,
   PlannerAppQueryResponse,
+  PlannerRemoteSnapshot,
   PlannerShortHorizonSnapshot,
   ShortHorizonQueryRequest,
   RescheduleSuggestionQueryRequest,
@@ -43,6 +45,9 @@ export interface PlannerAppPort {
   createRequest(
     request: CreatePlannerRequestRequest,
   ): Promise<PlannerAppOperationResponse>;
+  loadRemoteSnapshot(
+    request: LoadRemoteSnapshotQueryRequest,
+  ): Promise<PlannerAppQueryResponse<PlannerRemoteSnapshot>>;
   getTodaySummary(
     request: TodaySummaryQueryRequest,
   ): Promise<PlannerAppQueryResponse<TodayDecisionSummary>>;

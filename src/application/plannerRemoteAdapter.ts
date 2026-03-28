@@ -8,7 +8,9 @@ import type {
   PlannerAppOperationResponse,
   PlannerAppQueryKind,
   PlannerAppQueryResponse,
+  PlannerRemoteSnapshot,
   PlannerShortHorizonSnapshot,
+  LoadRemoteSnapshotQueryRequest,
   ResolvePlannerReviewRequest,
   ReviewItemsQueryRequest,
   TodaySummaryQueryRequest,
@@ -22,7 +24,9 @@ import {
   plannerApiRoutes,
   type ApplyDependencyPolicyHttpRequest,
   type AutoReplanDayHttpRequest,
+  type AutoReplanWeekHttpRequest,
   type CompleteBlockHttpRequest,
+  type ConfirmDayClosingHttpRequest,
   type CreateRequestHttpRequest,
   type CreateWorkHttpRequest,
   type DaySummaryHttpResponse,
@@ -31,6 +35,7 @@ import {
   type PullForwardBlockHttpRequest,
   type RemoteOperationContext,
   type RemotePlannerOperationResult,
+  type RemoteSnapshotHttpResponse,
   type RescheduleBlockHttpRequest,
   type ResolveDependencyHttpRequest,
   type ResolveReviewHttpRequest,
@@ -161,6 +166,18 @@ export function createPlannerRemoteAdapter(
 
   return {
     mode: "remote",
+    async loadRemoteSnapshot(
+      request: LoadRemoteSnapshotQueryRequest,
+    ): Promise<PlannerAppQueryResponse<PlannerRemoteSnapshot>> {
+      const response = await client.request<RemoteSnapshotHttpResponse>({
+        path: plannerApiRoutes.getStateSnapshot(),
+        method: "GET",
+      });
+
+      return response.ok
+        ? toQuerySuccess("load_remote_snapshot", request.meta, response.data)
+        : toQueryFailure("load_remote_snapshot", request.meta, response);
+    },
     async executeCommand<K extends ExecutePlannerCommandRequest["command"]>(
       request: ExecutePlannerCommandRequest<K>,
     ): Promise<PlannerAppOperationResponse> {
@@ -239,6 +256,19 @@ export function createPlannerRemoteAdapter(
             ? toOperationSuccess("pull_forward_block", request.meta, response.data)
             : toOperationFailure("pull_forward_block", request.meta, response);
         }
+        case "confirm_day_closing": {
+          const body: ConfirmDayClosingHttpRequest = {
+            context: toRemoteContext(request),
+          };
+          const response = await client.request<RemotePlannerOperationResult>({
+            path: plannerApiRoutes.confirmDayClosing(request.state.selectedDate),
+            method: "POST",
+            body,
+          });
+          return response.ok
+            ? toOperationSuccess("confirm_day_closing", request.meta, response.data)
+            : toOperationFailure("confirm_day_closing", request.meta, response);
+        }
         case "auto_replan_day": {
           const body: AutoReplanDayHttpRequest = {
             context: toRemoteContext(request),
@@ -251,6 +281,19 @@ export function createPlannerRemoteAdapter(
           return response.ok
             ? toOperationSuccess("auto_replan_day", request.meta, response.data)
             : toOperationFailure("auto_replan_day", request.meta, response);
+        }
+        case "auto_replan_week": {
+          const body: AutoReplanWeekHttpRequest = {
+            context: toRemoteContext(request),
+          };
+          const response = await client.request<RemotePlannerOperationResult>({
+            path: plannerApiRoutes.autoReplanWeek(request.state.selectedDate),
+            method: "POST",
+            body,
+          });
+          return response.ok
+            ? toOperationSuccess("auto_replan_week", request.meta, response.data)
+            : toOperationFailure("auto_replan_week", request.meta, response);
         }
         case "select_next_focus": {
           const response = await client.request<RemotePlannerOperationResult>({

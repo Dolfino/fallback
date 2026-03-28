@@ -1,6 +1,6 @@
 import {
+  getRemainingHorizonDates,
   getImmediateImpactSummary,
-  getShortHorizonDates,
   getShortHorizonLoad,
   getUpcomingPressurePoints,
 } from "../data/selectors";
@@ -99,7 +99,7 @@ function buildReviewOptions(
   data: PlannerData,
   referenceDate: string,
   allocationId: string,
-  count = 3,
+  count = 5,
 ): ReviewOption[] {
   const allocation = data.alocacoes.find((item) => item.id === allocationId);
   const block = data.blocos.find((item) => item.id === allocation?.blocoId);
@@ -109,12 +109,12 @@ function buildReviewOptions(
     return [];
   }
 
-  const dates = getShortHorizonDates(data, referenceDate, 3).filter((date) => date >= referenceDate);
+  const dates = getRemainingHorizonDates(data, referenceDate).filter((date) => date >= referenceDate);
   const load = getShortHorizonLoad(data, referenceDate, 3);
   const pressurePoints = getUpcomingPressurePoints(data, referenceDate, 6);
   const originalSlotIndex = data.slots.findIndex((slot) => slot.id === allocation.slotId);
 
-  return dates
+  const rankedOptions = dates
     .flatMap((date) => {
       const usedSlots = new Set(
         data.alocacoes
@@ -190,7 +190,21 @@ function buildReviewOptions(
       }
 
       return pressureWeight[first.pressureLevel] - pressureWeight[second.pressureLevel];
-    })
+    });
+
+  const firstOptionByDate = new Map<string, ReviewOption>();
+  for (const option of rankedOptions) {
+    if (!firstOptionByDate.has(option.date)) {
+      firstOptionByDate.set(option.date, option);
+    }
+  }
+
+  const diversifiedOptions = [
+    ...firstOptionByDate.values(),
+    ...rankedOptions.filter((option) => firstOptionByDate.get(option.date)?.id !== option.id),
+  ];
+
+  return diversifiedOptions
     .slice(0, count)
     .map((option, index) => ({
       ...option,
@@ -289,7 +303,7 @@ export function buildReviewItems(params: {
           (!item.blocoId || item.blocoId === bloco.id) &&
           item.status !== "liberada",
       );
-      const options = buildReviewOptions(data, referenceDate, allocation.id, 3);
+      const options = buildReviewOptions(data, referenceDate, allocation.id, 5);
       const suggestedOption = options[0];
       const decision = state.decisions[allocation.id];
       const acceptedOption = decision?.chosenOption;

@@ -3,6 +3,7 @@ import {
   Check,
   Clock3,
   Lock,
+  MoveRight,
   Play,
   SquareArrowOutUpRight,
   TimerReset,
@@ -262,6 +263,15 @@ export function AgendaDetailPanel({
               >
                 <Lock className="h-4 w-4" />
                 Bloquear
+              </button>
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={actionsDisabled}
+                onClick={() => onStatusChange(allocation.id, "remarcado")}
+                type="button"
+              >
+                <MoveRight className="h-4 w-4" />
+                Remarcar
               </button>
             </div>
 

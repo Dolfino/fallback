@@ -8,7 +8,7 @@ import type {
   Solicitacao,
   Trabalho,
 } from "../types/planner";
-import { addDays, getBusinessWeek, getOperationalDate } from "../utils/date";
+import { addDays, getBusinessDays, getOperationalDate } from "../utils/date";
 
 const SLOT_BLUEPRINTS: Array<Pick<Slot, "nome" | "horaInicio" | "horaFim" | "duracaoMin" | "tipo" | "perfil">> = [
   { nome: "Agenda 01", horaInicio: "08:00", horaFim: "08:25", duracaoMin: 25, tipo: "foco", perfil: "profundo" },
@@ -58,7 +58,7 @@ function createBlocks(trabalhoId: string, totalBlocos: number): Bloco[] {
 
 export function createMockPlannerData(referenceDate = new Date()): PlannerData {
   const dataOperacional = getOperationalDate(referenceDate);
-  const diasSemana = getBusinessWeek(dataOperacional);
+  const diasSemana = getBusinessDays(dataOperacional, 10);
   const hoje = dataOperacional;
   const amanha = addDays(hoje, 1);
   const depois = addDays(hoje, 2);
@@ -409,5 +409,6 @@ export function createMockPlannerData(referenceDate = new Date()): PlannerData {
     dependencias,
     registros,
     solicitacoes,
+    fechamentosOperacionais: [],
   };
 }

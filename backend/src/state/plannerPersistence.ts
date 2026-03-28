@@ -52,6 +52,8 @@ export interface PlannerPersistenceOptions {
   databaseUrl?: string;
 }
 
+const operationalHorizonDays = 10;
+
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const defaultDataDir = resolve(currentDir, "../../data");
 const defaultSnapshotFilePath = resolve(defaultDataDir, "planner-state.json");
@@ -70,6 +72,28 @@ function isPersistedPlannerSnapshot(value: unknown): value is PersistedPlannerSn
   }
 
   return value.version === 1 && isObject(value.plannerData) && isObject(value.reviewFlowState);
+}
+
+function normalizePlannerDataHorizon(data: PlannerData) {
+  if (data.diasSemana.length >= operationalHorizonDays) {
+    return data;
+  }
+
+  const regenerated = createMockPlannerData(new Date(`${data.dataOperacional}T12:00:00.000Z`));
+  return applyPlannerDerivedState(
+    {
+      ...data,
+      diasSemana: regenerated.diasSemana,
+    },
+    data.dataOperacional,
+  );
+}
+
+function normalizeLoadedSnapshot(snapshot: PlannerStoreSnapshot): PlannerStoreSnapshot {
+  return {
+    plannerData: normalizePlannerDataHorizon(structuredClone(snapshot.plannerData)),
+    reviewFlowState: structuredClone(snapshot.reviewFlowState),
+  };
 }
 
 function resolveSnapshotFilePath(filePath?: string) {
@@ -202,10 +226,10 @@ async function loadPostgresSnapshot(
     }
 
     return {
-      snapshot: {
+      snapshot: normalizeLoadedSnapshot({
         plannerData: structuredClone(payload.plannerData),
         reviewFlowState: structuredClone(payload.reviewFlowState),
-      },
+      }),
       source: "persisted",
       adapter,
     };
@@ -272,10 +296,10 @@ export function loadPlannerSnapshot(filePath?: string): PlannerSnapshotLoadResul
     }
 
     return {
-      snapshot: {
+      snapshot: normalizeLoadedSnapshot({
         plannerData: structuredClone(parsed.plannerData),
         reviewFlowState: structuredClone(parsed.reviewFlowState),
-      },
+      }),
       source: "persisted",
       filePath: snapshotFilePath,
     };

@@ -134,6 +134,20 @@ describe("planner snapshot persistence", () => {
     expect(item.status).toBe("remarcado");
   });
 
+  it("expands legacy snapshots to the current operational horizon on boot", () => {
+    const snapshotFilePath = createTempSnapshotFilePath();
+    const seed = createSeedPlannerSnapshot();
+    seed.plannerData.diasSemana = seed.plannerData.diasSemana.slice(0, 5);
+    savePlannerSnapshot(seed, snapshotFilePath);
+
+    const loaded = loadPlannerSnapshot(snapshotFilePath);
+
+    expect(loaded.source).toBe("persisted");
+    expect(loaded.snapshot.plannerData.diasSemana).toHaveLength(10);
+    expect(loaded.snapshot.plannerData.diasSemana[0]).toBe("2026-03-23");
+    expect(loaded.snapshot.plannerData.diasSemana[9]).toBe("2026-04-03");
+  });
+
   it("reset/reseed restores the base snapshot", () => {
     const snapshotFilePath = createTempSnapshotFilePath();
     const seed = createSeedPlannerSnapshot();

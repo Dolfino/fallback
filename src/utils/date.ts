@@ -29,18 +29,31 @@ export function getOperationalDate(referenceDate: Date) {
   return toIsoDate(date);
 }
 
-export function getBusinessWeek(referenceIsoDate: string) {
+export function getBusinessDays(referenceIsoDate: string, count = 5) {
   const date = fromIsoDate(referenceIsoDate);
   const day = date.getDay();
   const mondayOffset = day === 0 ? -6 : 1 - day;
   const monday = new Date(date);
   monday.setDate(monday.getDate() + mondayOffset);
 
-  return Array.from({ length: 5 }, (_, index) => {
-    const current = new Date(monday);
-    current.setDate(monday.getDate() + index);
-    return toIsoDate(current);
-  });
+  const businessDays: string[] = [];
+  const cursor = new Date(monday);
+
+  while (businessDays.length < count) {
+    const weekday = cursor.getDay();
+
+    if (weekday !== 0 && weekday !== 6) {
+      businessDays.push(toIsoDate(cursor));
+    }
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return businessDays;
+}
+
+export function getBusinessWeek(referenceIsoDate: string) {
+  return getBusinessDays(referenceIsoDate, 5);
 }
 
 export function isAfterDate(dateA: string, dateB: string) {

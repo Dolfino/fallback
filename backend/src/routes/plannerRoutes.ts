@@ -30,7 +30,9 @@ import {
 import type {
   ApplyDependencyPolicyHttpRequest,
   AutoReplanDayHttpRequest,
+  AutoReplanWeekHttpRequest,
   CompleteBlockHttpRequest,
+  ConfirmDayClosingHttpRequest,
   CreateRequestHttpRequest,
   CreateWorkHttpRequest,
   DaySummaryHttpResponse,
@@ -218,6 +220,17 @@ export const plannerRoutes: FastifyPluginAsync<{ store: PlannerStore }> = async 
         status: "ok",
       },
     });
+  });
+
+  fastify.get("/api/planner/state", async (request, reply) => {
+    const snapshot = store.readSnapshot();
+
+    reply.send(
+      createSuccess(request.id, {
+        plannerData: snapshot.plannerData,
+        reviewFlowState: snapshot.reviewFlowState,
+      }),
+    );
   });
 
   const handleDaySummary = async (
@@ -508,13 +521,18 @@ export const plannerRoutes: FastifyPluginAsync<{ store: PlannerStore }> = async 
         | "mark_block_partial"
         | "reschedule_block"
         | "pull_forward_block"
-        | "auto_replan_day";
+        | "confirm_day_closing"
+        | "auto_replan_day"
+        | "auto_replan_week";
       allocationId?: string;
       payload: Record<string, unknown>;
       context: TBody["context"];
     },
   ) => {
-    const requiresAllocationId = params.operation !== "auto_replan_day";
+    const requiresAllocationId =
+      params.operation !== "auto_replan_day" &&
+      params.operation !== "auto_replan_week" &&
+      params.operation !== "confirm_day_closing";
 
     if (requiresAllocationId && !params.allocationId) {
       throw new ApiError({
@@ -543,7 +561,9 @@ export const plannerRoutes: FastifyPluginAsync<{ store: PlannerStore }> = async 
       params.operation,
     );
     const commandContext =
-      params.operation === "auto_replan_day"
+      params.operation === "auto_replan_day" ||
+      params.operation === "auto_replan_week" ||
+      params.operation === "confirm_day_closing"
         ? buildPlannerBaseContext({
             data: snapshot.plannerData,
             referenceDate,
@@ -741,6 +761,32 @@ export const plannerRoutes: FastifyPluginAsync<{ store: PlannerStore }> = async 
     });
   });
 
+  fastify.post("/planner/operations/confirm-close", async (request, reply) => {
+    const body = readContextBody<ConfirmDayClosingHttpRequest>(request);
+    await executeOperationalCommand({
+      request,
+      reply,
+      operation: "confirm_day_closing",
+      payload: {},
+      context: body.context,
+    });
+  });
+
+  fastify.post("/api/planner/days/:date/actions/confirm-close", async (request, reply) => {
+    const params = request.params as { date?: string };
+    const body = readContextBody<ConfirmDayClosingHttpRequest>(request);
+    await executeOperationalCommand({
+      request,
+      reply,
+      operation: "confirm_day_closing",
+      payload: {},
+      context: {
+        ...body.context,
+        referenceDate: body.context?.referenceDate ?? params.date,
+      },
+    });
+  });
+
   fastify.post("/api/planner/days/:date/actions/auto-replan", async (request, reply) => {
     const params = request.params as { date?: string };
     const body = readContextBody<AutoReplanDayHttpRequest>(request);
@@ -748,6 +794,32 @@ export const plannerRoutes: FastifyPluginAsync<{ store: PlannerStore }> = async 
       request,
       reply,
       operation: "auto_replan_day",
+      payload: {},
+      context: {
+        ...body.context,
+        referenceDate: body.context?.referenceDate ?? params.date,
+      },
+    });
+  });
+
+  fastify.post("/planner/operations/auto-replan-week", async (request, reply) => {
+    const body = readContextBody<AutoReplanWeekHttpRequest>(request);
+    await executeOperationalCommand({
+      request,
+      reply,
+      operation: "auto_replan_week",
+      payload: {},
+      context: body.context,
+    });
+  });
+
+  fastify.post("/api/planner/weeks/:date/actions/auto-replan", async (request, reply) => {
+    const params = request.params as { date?: string };
+    const body = readContextBody<AutoReplanWeekHttpRequest>(request);
+    await executeOperationalCommand({
+      request,
+      reply,
+      operation: "auto_replan_week",
       payload: {},
       context: {
         ...body.context,

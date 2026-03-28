@@ -8,9 +8,11 @@ export type PlannerCommandName =
   | "block_allocation"
   | "reschedule_block"
   | "pull_forward_block"
+  | "confirm_day_closing"
   | "toggle_detail_panel"
   | "select_next_focus"
-  | "auto_replan_day";
+  | "auto_replan_day"
+  | "auto_replan_week";
 
 export type PlannerConsequenceType =
   | "work_created"
@@ -117,9 +119,11 @@ export interface PlannerCommandPayloadMap {
     reason?: string;
   };
   pull_forward_block: { allocationId: string; slotId: string };
+  confirm_day_closing: Record<string, never>;
   toggle_detail_panel: { nextOpen: boolean };
   select_next_focus: Record<string, never>;
   auto_replan_day: Record<string, never>;
+  auto_replan_week: Record<string, never>;
 }
 
 export interface PlannerTransitionUiPatch {

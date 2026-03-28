@@ -16,6 +16,21 @@ export function DailyClosingPage({ controller }: { controller: PlannerController
   const closing = getDailyClosingSummary(controller.plannerData, controller.selectedDate);
   const tomorrow = getTomorrowPreview(controller.plannerData, controller.selectedDate);
   const appliedPolicies = getAppliedDependencyPolicies(controller.plannerData);
+  const carryoverAllocations = controller.plannerData.alocacoes.filter(
+    (item) =>
+      item.dataPlanejada < controller.selectedDate &&
+      ["planejado", "parcial", "remarcado"].includes(item.statusAlocacao),
+  );
+  const carryoverWorkCount = new Set(
+    carryoverAllocations
+      .map((allocation) =>
+        controller.plannerData.blocos.find((block) => block.id === allocation.blocoId)?.trabalhoId,
+      )
+      .filter(Boolean),
+  ).size;
+  const confirmedClosing = (controller.plannerData.fechamentosOperacionais ?? []).find(
+    (entry) => entry.date === controller.selectedDate,
+  );
 
   return (
     <div className="grid h-full grid-cols-[320px_minmax(0,1fr)] gap-5">
@@ -33,6 +48,8 @@ export function DailyClosingPage({ controller }: { controller: PlannerController
           appliedPolicies={appliedPolicies}
           onAcceptReview={controller.applyRescheduleReview}
           onAutoReplan={controller.autoReplanDay}
+          onAutoReplanWeek={controller.autoReplanWeek}
+          onConfirmClosing={controller.confirmDayClosing}
           onDeferReview={controller.deferRescheduleReview}
           onIgnoreReview={controller.ignoreRescheduleReview}
           onOpenWork={(workId) => {
@@ -41,6 +58,9 @@ export function DailyClosingPage({ controller }: { controller: PlannerController
           }}
           reviewItems={controller.rescheduleReviewItems}
           tomorrow={tomorrow}
+          carryoverCount={carryoverAllocations.length}
+          carryoverWorkCount={carryoverWorkCount}
+          confirmedClosing={confirmedClosing}
         />
       </div>
     </div>

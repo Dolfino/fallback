@@ -284,6 +284,46 @@ describe("backend HTTP contracts", () => {
     expect(payload.data.impactSummary.headline).toContain("Pendências");
   });
 
+  it("auto-replans the carryover from the previous week into the new horizon", async () => {
+    const mutate = await app.inject({
+      method: "POST",
+      url: "/planner/operations/auto-replan-week",
+      payload: {
+        context: { referenceDate: "2026-03-30" },
+      },
+    });
+    const payload = mutate.json();
+    const moved = payload.data.nextData.alocacoes.find((entry: { id: string }) => entry.id === "aloc-3");
+    const blocked = payload.data.nextData.alocacoes.find((entry: { id: string }) => entry.id === "aloc-4");
+
+    expect(mutate.statusCode).toBe(200);
+    expect(moved.dataPlanejada).toBe("2026-03-30");
+    expect(moved.slotId).toBe("slot-1");
+    expect(moved.statusAlocacao).toBe("remarcado");
+    expect(blocked.dataPlanejada).toBe("2026-03-23");
+    expect(blocked.statusAlocacao).toBe("bloqueado");
+    expect(payload.data.impactSummary.headline).toContain("nova semana");
+  });
+
+  it("confirms the day closing and persists a fechamento record", async () => {
+    const mutate = await app.inject({
+      method: "POST",
+      url: "/planner/operations/confirm-close",
+      payload: {
+        context: { referenceDate: "2026-03-23" },
+      },
+    });
+    const payload = mutate.json();
+    const closing = payload.data.nextData.fechamentosOperacionais.find(
+      (entry: { date: string }) => entry.date === "2026-03-23",
+    );
+
+    expect(mutate.statusCode).toBe(200);
+    expect(closing).toBeTruthy();
+    expect(closing.pendingCount).toBeGreaterThan(0);
+    expect(payload.data.impactSummary.headline).toContain("Fechamento");
+  });
+
   it("returns validation_failed for invalid payloads", async () => {
     const response = await app.inject({
       method: "POST",

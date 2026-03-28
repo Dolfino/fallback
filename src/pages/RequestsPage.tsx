@@ -116,13 +116,13 @@ export function RequestsPage({ controller }: { controller: PlannerController }) 
         <section className="rounded-[32px] border border-black/5 bg-white p-5 shadow-panel">
           <h3 className="text-lg font-semibold tracking-tight text-slate-900">Impacto estimado</h3>
           <p className="mt-3 text-sm text-slate-600">
-            Capacidade livre da semana atual: {capacity.livreLabel}. Solicitações em triagem ainda não consomem agenda fixa.
+            Capacidade livre no horizonte visível: {capacity.livreLabel}. Solicitações em triagem ainda não consomem agenda fixa.
           </p>
         </section>
         <section className="rounded-[32px] border border-black/5 bg-white p-5 shadow-panel">
           <h3 className="text-lg font-semibold tracking-tight text-slate-900">Leitura operacional</h3>
           <p className="mt-3 text-sm text-slate-600">
-            Há uma solicitação em triagem com urgência alta. Se virar trabalho esta semana, tende a competir com blocos do relatório mensal.
+            Há uma solicitação em triagem com urgência alta. Se virar trabalho agora, tende a competir com blocos críticos já posicionados no horizonte.
           </p>
         </section>
       </aside>

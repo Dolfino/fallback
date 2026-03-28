@@ -156,6 +156,14 @@ export interface Solicitacao {
   decisao: DecisaoTriagem;
 }
 
+export interface FechamentoOperacional {
+  date: string;
+  confirmedAt: string;
+  pendingCount: number;
+  blockedCount: number;
+  carryoverCount: number;
+}
+
 export interface PlannerData {
   dataOperacional: string;
   diasSemana: string[];
@@ -166,4 +174,5 @@ export interface PlannerData {
   dependencias: Dependencia[];
   registros: RegistroExecucao[];
   solicitacoes: Solicitacao[];
+  fechamentosOperacionais?: FechamentoOperacional[];
 }

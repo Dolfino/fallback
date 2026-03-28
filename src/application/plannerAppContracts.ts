@@ -28,6 +28,7 @@ export type PlannerAppOperationKind =
   | "apply_dependency_policy";
 
 export type PlannerAppQueryKind =
+  | "load_remote_snapshot"
   | "get_today_summary"
   | "get_short_horizon"
   | "get_review_items"
@@ -130,6 +131,16 @@ export interface RescheduleSuggestionQueryRequest {
   meta: PlannerAppRequestMeta;
   state: PlannerAppStateSnapshot;
   allocationId: string;
+}
+
+export interface LoadRemoteSnapshotQueryRequest {
+  meta: PlannerAppRequestMeta;
+  state: PlannerAppStateSnapshot;
+}
+
+export interface PlannerRemoteSnapshot {
+  plannerData: PlannerData;
+  reviewFlowState: ReviewFlowState;
 }
 
 export interface PlannerAppOperationSuccess {

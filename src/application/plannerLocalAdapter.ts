@@ -35,6 +35,7 @@ import type {
   PlannerAppQueryKind,
   PlannerAppQueryResponse,
   PlannerAppRequestMeta,
+  PlannerRemoteSnapshot,
   PlannerAppStateSnapshot,
   PlannerShortHorizonSnapshot,
   ResolvePlannerReviewRequest,
@@ -174,6 +175,16 @@ async function resolveLocalReview(
 export function createPlannerLocalAdapter(): PlannerAppPort {
   return {
     mode: "local",
+    async loadRemoteSnapshot(request) {
+      return createQuerySuccess<PlannerRemoteSnapshot>({
+        meta: request.meta,
+        kind: "load_remote_snapshot",
+        data: {
+          plannerData: request.state.plannerData,
+          reviewFlowState: request.state.reviewFlowState,
+        },
+      });
+    },
     executeCommand(request) {
       return executeLocalCommand(request);
     },

@@ -9,8 +9,11 @@ import type {
   PlannerShortHorizonSnapshot,
 } from "../application/plannerAppContracts";
 import {
+  alignControllerSeedToOperationalFocus,
   clearPlannerLocalSnapshot,
   createLocalControllerSeed,
+  getPlannerOperationalFocusDate,
+  getPlannerSelectionForDate,
   loadPlannerLocalSnapshot,
   loadPlannerPreferences,
   resetPlannerPreferences as resetStoredPlannerPreferences,
@@ -24,7 +27,7 @@ import {
   getTomorrowPreview,
   getUpcomingPressurePoints,
 } from "../data/selectors";
-import { applyPlannerDerivedState, clampPlannerDate } from "../domain/plannerDerivedState";
+import { applyPlannerDerivedState, clampPlannerDate, shiftPlannerDate } from "../domain/plannerDerivedState";
 import {
   applyPlannerOperationState,
   type PlannerOperationApplication,
@@ -74,10 +77,12 @@ export function usePlannerState(adapter?: PlannerAppPort) {
   );
   const initialControllerState = useMemo(() => {
     if (!isRemoteMode && preferences.persistLocalState) {
-      return loadPlannerLocalSnapshot() ?? createLocalControllerSeed(preferences);
+      return alignControllerSeedToOperationalFocus(
+        loadPlannerLocalSnapshot() ?? createLocalControllerSeed(preferences),
+      );
     }
 
-    return createLocalControllerSeed(preferences);
+    return alignControllerSeedToOperationalFocus(createLocalControllerSeed(preferences));
   }, [isRemoteMode, preferences]);
 
   const [plannerData, setPlannerData] = useState(initialControllerState.plannerData);
@@ -109,17 +114,17 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     initialControllerState.reviewFlowState,
   );
   const [todaySummary, setTodaySummary] = useState(() =>
-    getTodayDecisionSummary(initialControllerState.plannerData, initialControllerState.plannerData.dataOperacional),
+    getTodayDecisionSummary(initialControllerState.plannerData, initialControllerState.selectedDate),
   );
   const [shortHorizonSnapshot, setShortHorizonSnapshot] = useState<PlannerShortHorizonSnapshot>(() => ({
-    load: getShortHorizonLoad(initialControllerState.plannerData, initialControllerState.plannerData.dataOperacional),
-    pressurePoints: getUpcomingPressurePoints(initialControllerState.plannerData, initialControllerState.plannerData.dataOperacional),
-    tomorrow: getTomorrowPreview(initialControllerState.plannerData, initialControllerState.plannerData.dataOperacional),
+    load: getShortHorizonLoad(initialControllerState.plannerData, initialControllerState.selectedDate),
+    pressurePoints: getUpcomingPressurePoints(initialControllerState.plannerData, initialControllerState.selectedDate),
+    tomorrow: getTomorrowPreview(initialControllerState.plannerData, initialControllerState.selectedDate),
   }));
   const [rescheduleReviewItems, setRescheduleReviewItems] = useState<ReviewItemView[]>(() =>
     buildReviewItems({
       data: initialControllerState.plannerData,
-      referenceDate: initialControllerState.plannerData.dataOperacional,
+      referenceDate: initialControllerState.selectedDate,
       state: initialControllerState.reviewFlowState,
     }),
   );
@@ -132,6 +137,7 @@ export function usePlannerState(adapter?: PlannerAppPort) {
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const deferredGlobalSearchQuery = useDeferredValue(globalSearchQuery);
   const retryLastOperationRef = useRef<null | (() => Promise<void>)>(null);
+  const remoteSnapshotLoadedRef = useRef(false);
   const globalSearchResults = useMemo(
     () => searchPlannerData(plannerData, deferredGlobalSearchQuery),
     [deferredGlobalSearchQuery, plannerData],
@@ -192,6 +198,44 @@ export function usePlannerState(adapter?: PlannerAppPort) {
 
     return () => window.clearTimeout(timeoutId);
   }, [slotFeedback]);
+
+  useEffect(() => {
+    if (!isRemoteMode || remoteSnapshotLoadedRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRemoteSnapshot = async () => {
+      const response = await plannerApp.loadRemoteSnapshot({
+        meta: createRequestMeta(),
+        state: appState(),
+      });
+
+      if (cancelled || !response.ok) {
+        return;
+      }
+
+      remoteSnapshotLoadedRef.current = true;
+
+      const nextDate = getPlannerOperationalFocusDate(response.data.plannerData);
+      const nextSelection = getPlannerSelectionForDate(response.data.plannerData, nextDate);
+
+      startTransition(() => {
+        setPlannerData(response.data.plannerData);
+        setReviewFlowState(response.data.reviewFlowState);
+        setSelectedDate(nextDate);
+        setSelectedSlotId(nextSelection.selectedSlotId);
+        setSelectedWorkId(nextSelection.selectedWorkId);
+      });
+    };
+
+    void loadRemoteSnapshot();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isRemoteMode, plannerApp, selectedDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -316,17 +360,17 @@ export function usePlannerState(adapter?: PlannerAppPort) {
       setOperationError(null);
       setPendingOperation(null);
       setTodaySummary(
-        getTodayDecisionSummary(nextSeed.plannerData, nextSeed.plannerData.dataOperacional),
+        getTodayDecisionSummary(nextSeed.plannerData, nextSeed.selectedDate),
       );
       setShortHorizonSnapshot({
-        load: getShortHorizonLoad(nextSeed.plannerData, nextSeed.plannerData.dataOperacional),
-        pressurePoints: getUpcomingPressurePoints(nextSeed.plannerData, nextSeed.plannerData.dataOperacional),
-        tomorrow: getTomorrowPreview(nextSeed.plannerData, nextSeed.plannerData.dataOperacional),
+        load: getShortHorizonLoad(nextSeed.plannerData, nextSeed.selectedDate),
+        pressurePoints: getUpcomingPressurePoints(nextSeed.plannerData, nextSeed.selectedDate),
+        tomorrow: getTomorrowPreview(nextSeed.plannerData, nextSeed.selectedDate),
       });
       setRescheduleReviewItems(
         buildReviewItems({
           data: nextSeed.plannerData,
-          referenceDate: nextSeed.plannerData.dataOperacional,
+          referenceDate: nextSeed.selectedDate,
           state: nextSeed.reviewFlowState,
         }),
       );
@@ -349,8 +393,7 @@ export function usePlannerState(adapter?: PlannerAppPort) {
   };
 
   const shiftDate = (direction: -1 | 1) => {
-    const candidate = addDays(selectedDate, direction);
-    setSelectedDate(clampPlannerDate(candidate, plannerData.diasSemana));
+    setSelectedDate(shiftPlannerDate(selectedDate, direction, plannerData.diasSemana));
   };
 
   const selectSlot = (slotId: string, date = selectedDate) => {
@@ -545,6 +588,21 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     });
   };
 
+  const applyPreferredReschedule = (allocationId: string) => {
+    const reviewItem = rescheduleReviewItems.find((item) => item.allocationId === allocationId);
+    const preferredOption =
+      reviewItem?.acceptedOption ??
+      reviewItem?.suggestedOption ??
+      reviewItem?.alternatives[0];
+
+    if (preferredOption) {
+      applyRescheduleReview(allocationId, preferredOption);
+      return;
+    }
+
+    rescheduleBlock(allocationId);
+  };
+
   const pullForwardBlock = (allocationId: string, slotId: string) => {
     runCommand("pull_forward_block", { allocationId, slotId });
   };
@@ -559,6 +617,26 @@ export function usePlannerState(adapter?: PlannerAppPort) {
 
   const autoReplanDay = () => {
     runCommand("auto_replan_day", {});
+  };
+
+  const autoReplanWeek = () => {
+    runCommand("auto_replan_week", {});
+  };
+
+  const confirmDayClosing = () => {
+    void runOperation({
+      kind: "confirm_day_closing",
+      execute: () =>
+        plannerApp.executeCommand({
+          meta: createRequestMeta(),
+          state: appState(),
+          command: "confirm_day_closing",
+          payload: {},
+        }),
+      onSuccess: () => {
+        setActiveView("today");
+      },
+    });
   };
 
   const resolveDependency = (dependencyId: string) => {
@@ -629,7 +707,7 @@ export function usePlannerState(adapter?: PlannerAppPort) {
       concluido: completeBlock,
       parcial: markBlockPartial,
       bloqueado: blockAllocation,
-      remarcado: (id: string) => rescheduleBlock(id),
+      remarcado: (id: string) => applyPreferredReschedule(id),
     };
 
     commands[status](allocationId);
@@ -752,6 +830,11 @@ export function usePlannerState(adapter?: PlannerAppPort) {
         event.preventDefault();
         blockAllocation(selectedItem.alocacao.id);
       }
+
+      if (key === "r") {
+        event.preventDefault();
+        updateAllocationStatus(selectedItem.alocacao.id, "remarcado");
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -797,6 +880,8 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     addWork,
     addRequest,
     autoReplanDay,
+    autoReplanWeek,
+    confirmDayClosing,
     navigateSlots,
     selectNextFocus,
     toggleDetailPanel,

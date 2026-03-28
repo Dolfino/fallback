@@ -47,6 +47,9 @@ npm run backend:dev
 - busca global no topo para trabalhos, clientes/projetos, solicitações, agendas e bloqueios
 - configurações reais de tela inicial, data base local e persistência no navegador
 - restauração rápida do ambiente local a partir da seed configurada
+- foco inicial automático no dia útil atual e, em fim de semana, no próximo dia útil disponível
+- horizonte semanal visível alinhado com a data em foco
+- fechamento operacional com replanejamento do dia, carregamento de pendências anteriores e confirmação persistida
 
 ## Variáveis de ambiente
 O arquivo [.env.example](/home/dns/Desenvolvimento/Planejador/.env.example) reúne as variáveis mais úteis para frontend, backend, PostgreSQL e smoke test.

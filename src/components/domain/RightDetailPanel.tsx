@@ -371,6 +371,7 @@ export function RightDetailPanel({
                 >
                   <MoveRight className="h-4 w-4" />
                   Remarcar
+                  <KeyHint>R</KeyHint>
                 </button>
                 <button
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700"

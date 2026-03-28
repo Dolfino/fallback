@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { formatDateShort, formatMinutes } from "../../utils/format";
 import type { ReviewItemView, ReviewOption } from "../../types/domain";
+import type { FechamentoOperacional } from "../../types/planner";
 import { StatusBadge } from "../ui/StatusBadge";
 import { HorizonPressurePanel } from "./HorizonPressurePanel";
 import { RescheduleReviewPanel } from "./RescheduleReviewPanel";
@@ -11,6 +13,8 @@ type AppliedDependencyPolicies = ReturnType<typeof import("../../data/selectors"
 interface DailyClosingPanelProps {
   groups: ClosingGroups;
   onAutoReplan: () => void;
+  onAutoReplanWeek: () => void;
+  onConfirmClosing: () => void;
   tomorrow: TomorrowPreview;
   appliedPolicies: AppliedDependencyPolicies;
   reviewItems: ReviewItemView[];
@@ -18,6 +22,9 @@ interface DailyClosingPanelProps {
   onDeferReview: (allocationId: string) => void;
   onIgnoreReview: (allocationId: string) => void;
   onOpenWork: (workId: string) => void;
+  carryoverCount: number;
+  carryoverWorkCount: number;
+  confirmedClosing?: FechamentoOperacional;
 }
 
 function renderGroup(
@@ -70,6 +77,8 @@ function renderGroup(
 export function DailyClosingPanel({
   groups,
   onAutoReplan,
+  onAutoReplanWeek,
+  onConfirmClosing,
   tomorrow,
   appliedPolicies,
   reviewItems,
@@ -77,8 +86,20 @@ export function DailyClosingPanel({
   onDeferReview,
   onIgnoreReview,
   onOpenWork,
+  carryoverCount,
+  carryoverWorkCount,
+  confirmedClosing,
 }: DailyClosingPanelProps) {
   const totalPendencias = groups.parciais.length + groups.naoExecutados.length + groups.bloqueados.length;
+  const reviewPanelRef = useRef<HTMLElement | null>(null);
+  const pendingReviewItems = reviewItems.filter((item) => item.reviewStatus === "pending");
+
+  const focusReviewPanel = () => {
+    reviewPanelRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   return (
     <div className="space-y-5">
@@ -206,15 +227,36 @@ export function DailyClosingPanel({
         ) : null}
       </section>
 
-      <RescheduleReviewPanel
-        items={reviewItems}
-        onAccept={onAcceptReview}
-        onDefer={onDeferReview}
-        onIgnore={onIgnoreReview}
-        onOpenWork={onOpenWork}
-      />
+      <section ref={reviewPanelRef}>
+        <RescheduleReviewPanel
+          items={pendingReviewItems.length ? pendingReviewItems : reviewItems}
+          onAccept={onAcceptReview}
+          onDefer={onDeferReview}
+          onIgnore={onIgnoreReview}
+          onOpenWork={onOpenWork}
+          subtitle={
+            pendingReviewItems.length
+              ? `${pendingReviewItems.length} item${pendingReviewItems.length === 1 ? "" : "s"} ainda pede${pendingReviewItems.length === 1 ? "" : "m"} decisão.`
+              : "Compare sugerido e aceito sem sair do fluxo operacional."
+          }
+        />
+      </section>
 
       <section className="rounded-[32px] border border-black/5 bg-white p-5 shadow-panel">
+        {carryoverCount ? (
+          <div className="mb-5 rounded-3xl border border-amber-200 bg-amber-50 px-4 py-4">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-amber-700">
+              Pendências anteriores
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">
+              {carryoverCount} bloco{carryoverCount === 1 ? "" : "s"} ainda ficou{carryoverCount === 1 ? "" : "ram"} antes de {formatDateShort(tomorrow.data)}.
+            </p>
+            <p className="mt-2 text-sm text-slate-700">
+              {carryoverWorkCount} trabalho{carryoverWorkCount === 1 ? "" : "s"} ainda precisa{carryoverWorkCount === 1 ? "" : "m"} entrar no novo horizonte.
+            </p>
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold tracking-tight text-slate-900">Encerrar dia operacional</h3>
@@ -231,14 +273,37 @@ export function DailyClosingPanel({
             >
               Replanejar automaticamente
             </button>
-            <button className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700" type="button">
+            {carryoverCount ? (
+              <button
+                className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800"
+                onClick={onAutoReplanWeek}
+                type="button"
+              >
+                Trazer pendências anteriores
+              </button>
+            ) : null}
+            <button
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={focusReviewPanel}
+              disabled={!reviewItems.length}
+              type="button"
+            >
               Revisar remarcações
             </button>
-            <button className="rounded-2xl bg-shell px-4 py-2 text-sm font-medium text-white" type="button">
-              Confirmar fechamento
+            <button
+              className="rounded-2xl bg-shell px-4 py-2 text-sm font-medium text-white"
+              onClick={onConfirmClosing}
+              type="button"
+            >
+              {confirmedClosing ? "Reconfirmar fechamento" : "Confirmar fechamento"}
             </button>
           </div>
         </div>
+        {confirmedClosing ? (
+          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            Fechamento registrado em {new Date(confirmedClosing.confirmedAt).toLocaleString("pt-BR")}. Pendentes: {confirmedClosing.pendingCount}. Bloqueados: {confirmedClosing.blockedCount}.
+          </div>
+        ) : null}
       </section>
     </div>
   );
