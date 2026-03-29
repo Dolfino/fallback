@@ -24,8 +24,12 @@ import {
 import {
   createPlannerRequest,
   createPlannerWork,
+  updatePlannerWork,
+  validatePlannerWorkUpdate,
 } from "../domain/plannerIntake";
+import { createPlannerIssue, updatePlannerIssue } from "../domain/plannerIssues";
 import type {
+  CreatePlannerIssueRequest,
   CreatePlannerRequestRequest,
   CreatePlannerWorkRequest,
   ExecutePlannerCommandRequest,
@@ -39,6 +43,8 @@ import type {
   PlannerAppStateSnapshot,
   PlannerShortHorizonSnapshot,
   ResolvePlannerReviewRequest,
+  UpdatePlannerIssueRequest,
+  UpdatePlannerWorkRequest,
 } from "./plannerAppContracts";
 import type { PlannerAppPort } from "./plannerAppPort";
 
@@ -276,6 +282,97 @@ export function createPlannerLocalAdapter(): PlannerAppPort {
       return createOperationSuccess({
         meta: request.meta,
         operation: "create_work",
+        application: buildDependencyApplication(resolution),
+      });
+    },
+
+    async updateWork(request: UpdatePlannerWorkRequest) {
+      const validationError = validatePlannerWorkUpdate({
+        data: request.state.plannerData,
+        workId: request.workId,
+        input: request.input,
+      });
+
+      if (validationError) {
+        return createOperationError({
+          meta: request.meta,
+          operation: "update_work",
+          code: validationError.code,
+          message: validationError.message,
+          targetId: validationError.targetId ?? request.workId,
+          detail: validationError.detail,
+        });
+      }
+
+      const resolution = updatePlannerWork({
+        data: request.state.plannerData,
+        referenceDate: request.state.selectedDate,
+        workId: request.workId,
+        input: request.input,
+      });
+
+      if (!resolution) {
+        return createOperationError({
+          meta: request.meta,
+          operation: "update_work",
+          code: "work_update_failed",
+          message: "Não foi possível atualizar o trabalho selecionado.",
+          targetId: request.workId,
+        });
+      }
+
+      return createOperationSuccess({
+        meta: request.meta,
+        operation: "update_work",
+        application: buildDependencyApplication(resolution),
+      });
+    },
+
+    async createIssue(request: CreatePlannerIssueRequest) {
+      const resolution = createPlannerIssue({
+        data: request.state.plannerData,
+        referenceDate: request.state.selectedDate,
+        input: request.input,
+      });
+
+      if (!resolution) {
+        return createOperationError({
+          meta: request.meta,
+          operation: "create_issue",
+          code: "issue_creation_failed",
+          message: "Não foi possível registrar a issue para este trabalho.",
+          targetId: request.input.trabalhoId,
+        });
+      }
+
+      return createOperationSuccess({
+        meta: request.meta,
+        operation: "create_issue",
+        application: buildDependencyApplication(resolution),
+      });
+    },
+
+    async updateIssue(request: UpdatePlannerIssueRequest) {
+      const resolution = updatePlannerIssue({
+        data: request.state.plannerData,
+        referenceDate: request.state.selectedDate,
+        issueId: request.issueId,
+        input: request.input,
+      });
+
+      if (!resolution) {
+        return createOperationError({
+          meta: request.meta,
+          operation: "update_issue",
+          code: "issue_update_failed",
+          message: "Não foi possível atualizar a issue deste trabalho.",
+          targetId: request.issueId,
+        });
+      }
+
+      return createOperationSuccess({
+        meta: request.meta,
+        operation: "update_issue",
         application: buildDependencyApplication(resolution),
       });
     },

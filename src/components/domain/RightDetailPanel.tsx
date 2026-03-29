@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ArrowUpRight,
   Check,
@@ -14,6 +15,7 @@ import type { SuggestionItem, TimelineSlotItem } from "../../data/selectors";
 import type {
   ImmediateImpactSummary,
   PlannerConsequence,
+  PlannerIssueInput,
   ReviewItemView,
   ReviewOption,
 } from "../../types/domain";
@@ -47,6 +49,7 @@ interface RightDetailPanelProps {
   recentConsequences: PlannerConsequence[];
   rescheduleSuggestion?: ReviewOption;
   reviewItem?: ReviewItemView;
+  onCreateIssue: (input: PlannerIssueInput) => void;
   onAcceptReview: (allocationId: string, target?: ReviewOption) => void;
   onDeferReview: (allocationId: string) => void;
   onIgnoreReview: (allocationId: string) => void;
@@ -96,6 +99,7 @@ export function RightDetailPanel({
   recentConsequences,
   rescheduleSuggestion,
   reviewItem,
+  onCreateIssue,
   onAcceptReview,
   onDeferReview,
   onIgnoreReview,
@@ -103,6 +107,17 @@ export function RightDetailPanel({
   const allocation = item?.alocacao;
   const trabalho = item?.trabalho;
   const bloco = item?.bloco;
+  const [issueDraft, setIssueDraft] = useState<{
+    tipo: "tarefa" | "problema";
+    etapaId: string;
+    titulo: string;
+    descricao: string;
+  }>({
+    tipo: "tarefa",
+    etapaId: "",
+    titulo: "",
+    descricao: "",
+  });
 
   const completedBlocks =
     trabalho && bloco
@@ -148,6 +163,28 @@ export function RightDetailPanel({
       ) === index
     );
   });
+  const handleIssueSubmit = () => {
+    if (!trabalho || !bloco || !allocation || !issueDraft.titulo.trim()) {
+      return;
+    }
+
+    onCreateIssue({
+      trabalhoId: trabalho.id,
+      etapaId: issueDraft.etapaId || undefined,
+      blocoId: bloco.id,
+      alocacaoId: allocation.id,
+      tipo: issueDraft.tipo,
+      titulo: issueDraft.titulo.trim(),
+      descricao: issueDraft.descricao.trim(),
+    });
+
+    setIssueDraft({
+      tipo: "tarefa",
+      etapaId: issueDraft.etapaId,
+      titulo: "",
+      descricao: "",
+    });
+  };
 
   return (
     <aside className="scrollbar-thin min-h-0 space-y-5 overflow-y-auto">
@@ -380,6 +417,101 @@ export function RightDetailPanel({
                 >
                   <SquareArrowOutUpRight className="h-4 w-4" />
                   Abrir trabalho
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-black/5 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Registrar issue</p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    Capture tarefa ou problema descoberto durante este bloco.
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                  bloco {bloco.sequencia}/{bloco.totalBlocos}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="grid grid-cols-[140px_minmax(0,1fr)] gap-3">
+                  <label className="space-y-2">
+                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Tipo</span>
+                    <select
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none"
+                      onChange={(event) =>
+                        setIssueDraft((current) => ({
+                          ...current,
+                          tipo: event.target.value as "tarefa" | "problema",
+                        }))
+                      }
+                      value={issueDraft.tipo}
+                    >
+                      <option value="tarefa">Tarefa</option>
+                      <option value="problema">Problema</option>
+                    </select>
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Milestone</span>
+                    <select
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none"
+                      onChange={(event) =>
+                        setIssueDraft((current) => ({
+                          ...current,
+                          etapaId: event.target.value,
+                        }))
+                      }
+                      value={issueDraft.etapaId}
+                    >
+                      <option value="">Sem milestone específico</option>
+                      {trabalho.etapas?.map((etapa) => (
+                        <option key={etapa.id} value={etapa.id}>
+                          {etapa.titulo}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <label className="space-y-2">
+                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Título</span>
+                  <input
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none"
+                    onChange={(event) =>
+                      setIssueDraft((current) => ({
+                        ...current,
+                        titulo: event.target.value,
+                      }))
+                    }
+                    placeholder="Ex.: Ajustar dependência do cronograma"
+                    value={issueDraft.titulo}
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">Contexto</span>
+                  <textarea
+                    className="min-h-[88px] w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none"
+                    onChange={(event) =>
+                      setIssueDraft((current) => ({
+                        ...current,
+                        descricao: event.target.value,
+                      }))
+                    }
+                    placeholder="Descreva a tarefa descoberta ou o problema encontrado neste bloco."
+                    value={issueDraft.descricao}
+                  />
+                </label>
+
+                <button
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-shell px-4 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={actionsDisabled || !issueDraft.titulo.trim()}
+                  onClick={handleIssueSubmit}
+                  type="button"
+                >
+                  Registrar issue
                 </button>
               </div>
             </div>

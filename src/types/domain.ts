@@ -1,5 +1,5 @@
 import type { PlannerData } from "./planner";
-import type { EtapaTrabalho, Prioridade } from "./planner";
+import type { EtapaTrabalho, Prioridade, TipoIssueTrabalho } from "./planner";
 
 export type PlannerCommandName =
   | "start_block"
@@ -16,6 +16,7 @@ export type PlannerCommandName =
 
 export type PlannerConsequenceType =
   | "work_created"
+  | "issue_created"
   | "request_created"
   | "focus_changed"
   | "slot_freed"
@@ -76,6 +77,14 @@ export interface PlannerWorkInput {
   observacoes: string;
 }
 
+export interface PlannerWorkUpdateInput {
+  titulo: string;
+  descricao: string;
+  prazoData: string;
+  duracaoEstimadaMin: number;
+  etapas: EtapaTrabalho[];
+}
+
 export interface PlannerRequestInput {
   tituloInicial: string;
   descricaoInicial: string;
@@ -84,6 +93,23 @@ export interface PlannerRequestInput {
   prazoSugerido: string;
   urgenciaInformada: Prioridade;
   esforcoEstimadoInicialMin: number;
+}
+
+export interface PlannerIssueInput {
+  trabalhoId: string;
+  etapaId?: string;
+  blocoId?: string;
+  alocacaoId?: string;
+  tipo: TipoIssueTrabalho;
+  titulo: string;
+  descricao: string;
+}
+
+export interface PlannerIssueUpdateInput {
+  etapaId?: string;
+  tipo: TipoIssueTrabalho;
+  titulo: string;
+  descricao: string;
 }
 
 export interface SystemFeedback {

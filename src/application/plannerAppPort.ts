@@ -1,5 +1,6 @@
 import type {
   ApplyDependencyPolicyRequest,
+  CreatePlannerIssueRequest,
   CreatePlannerRequestRequest,
   CreatePlannerWorkRequest,
   ExecutePlannerCommandRequest,
@@ -15,6 +16,8 @@ import type {
   ResolvePlannerReviewRequest,
   ReviewItemsQueryRequest,
   TodaySummaryQueryRequest,
+  UpdatePlannerIssueRequest,
+  UpdatePlannerWorkRequest,
 } from "./plannerAppContracts";
 import type {
   ReviewItemView,
@@ -41,6 +44,15 @@ export interface PlannerAppPort {
   ): Promise<PlannerAppOperationResponse>;
   createWork(
     request: CreatePlannerWorkRequest,
+  ): Promise<PlannerAppOperationResponse>;
+  updateWork(
+    request: UpdatePlannerWorkRequest,
+  ): Promise<PlannerAppOperationResponse>;
+  createIssue(
+    request: CreatePlannerIssueRequest,
+  ): Promise<PlannerAppOperationResponse>;
+  updateIssue(
+    request: UpdatePlannerIssueRequest,
   ): Promise<PlannerAppOperationResponse>;
   createRequest(
     request: CreatePlannerRequestRequest,

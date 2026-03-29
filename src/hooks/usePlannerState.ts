@@ -2,6 +2,7 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState
 import { createPlannerAppAdapter } from "../application/createPlannerAppAdapter";
 import type { PlannerAppPort, PlannerAppStateSnapshot } from "../application/plannerAppPort";
 import type {
+  CreatePlannerIssueRequest,
   PlannerAppOperationError,
   PlannerAppOperationKind,
   PlannerAppOperationResponse,
@@ -42,8 +43,11 @@ import type {
   ImmediateImpactSummary,
   PlannerCommandPayloadMap,
   PlannerConsequence,
+  PlannerIssueInput,
+  PlannerIssueUpdateInput,
   PlannerRequestInput,
   PlannerWorkInput,
+  PlannerWorkUpdateInput,
   ReviewFlowState,
   ReviewItemView,
   ReviewOption,
@@ -686,6 +690,33 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     });
   };
 
+  const updateWork = (workId: string, input: PlannerWorkUpdateInput) => {
+    void runOperation({
+      kind: "update_work",
+      targetId: workId,
+      execute: () =>
+        plannerApp.updateWork({
+          meta: createRequestMeta(),
+          state: appState(),
+          workId,
+          input,
+        }),
+    });
+  };
+
+  const addIssue = (input: PlannerIssueInput) => {
+    void runOperation({
+      kind: "create_issue",
+      targetId: input.trabalhoId,
+      execute: () =>
+        plannerApp.createIssue({
+          meta: createRequestMeta(),
+          state: appState(),
+          input,
+        } as CreatePlannerIssueRequest),
+    });
+  };
+
   const addRequest = (input: PlannerRequestInput) => {
     void runOperation({
       kind: "create_request",
@@ -693,6 +724,20 @@ export function usePlannerState(adapter?: PlannerAppPort) {
         plannerApp.createRequest({
           meta: createRequestMeta(),
           state: appState(),
+          input,
+        }),
+    });
+  };
+
+  const updateIssue = (issueId: string, input: PlannerIssueUpdateInput) => {
+    void runOperation({
+      kind: "update_issue",
+      targetId: issueId,
+      execute: () =>
+        plannerApp.updateIssue({
+          meta: createRequestMeta(),
+          state: appState(),
+          issueId,
           input,
         }),
     });
@@ -878,6 +923,9 @@ export function usePlannerState(adapter?: PlannerAppPort) {
     applyDependencyPolicy,
     resolveDependency,
     addWork,
+    updateWork,
+    addIssue,
+    updateIssue,
     addRequest,
     autoReplanDay,
     autoReplanWeek,

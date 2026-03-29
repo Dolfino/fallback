@@ -160,6 +160,10 @@ export function getRemainingHorizonDates(data: PlannerData, referenceDate: strin
   return data.diasSemana.slice(safeIndex);
 }
 
+export function isWorkOperationallyVisible(trabalho: Trabalho) {
+  return trabalho.status !== "concluido" && trabalho.percentualConclusao < 100;
+}
+
 function priorityWeight(priority: Prioridade) {
   const weights: Record<Prioridade, number> = {
     baixa: 1,
@@ -1043,6 +1047,7 @@ export function getAppliedDependencyPolicies(data: PlannerData) {
 
 export function getUpcomingDeliveries(data: PlannerData) {
   return [...data.trabalhos]
+    .filter(isWorkOperationallyVisible)
     .sort((first, second) => first.prazoData.localeCompare(second.prazoData))
     .slice(0, 4);
 }

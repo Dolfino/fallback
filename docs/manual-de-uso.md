@@ -223,6 +223,21 @@ Ao abrir um trabalho, você vê:
 - dependências
 - histórico
 - etapas internas, quando existirem
+- issues registradas durante a execução, agrupadas por etapa quando houver vínculo
+
+No detalhe do trabalho, você também pode editar:
+- título
+- subtítulo
+- prazo
+- estimado total
+- etapas internas, incluindo título, subtítulo e tempo
+
+Regras operacionais desse fluxo:
+- a soma das etapas não pode ultrapassar o estimado do trabalho
+- o painel mostra quanto das etapas já foi distribuído e quanto ainda sobra
+- se quiser, use `Usar soma das etapas no estimado` para sincronizar o total antes de salvar
+- quando o estimado aumenta, o sistema adiciona novos blocos
+- quando o estimado diminui, o sistema remove blocos futuros não comprometidos
 
 ## Casos de uso
 
@@ -349,7 +364,43 @@ Resultado esperado:
 - as subtarefas aparecem como etapas internas
 - os blocos passam a poder ser distribuídos pelo sistema
 
-### Caso 9. Triar uma nova demanda antes de virar trabalho
+### Caso 9. Registrar uma issue durante um bloco em execução
+Objetivo:
+- capturar tarefa descoberta ou problema encontrado sem perder o vínculo com o trabalho atual
+
+Passos:
+1. Em `Hoje` ou `Semana`, selecione o bloco em execução ou o bloco em foco.
+2. No painel lateral, use `Registrar issue`.
+3. Escolha `Tarefa` ou `Problema`.
+4. Se fizer sentido, escolha a etapa interna correspondente.
+5. Preencha título e contexto.
+6. Confirme a criação.
+
+Resultado esperado:
+- a issue fica vinculada ao trabalho atual
+- quando houver milestone escolhido, ela aparece agrupada naquela etapa no detalhe do trabalho
+- o bloco continua sendo a unidade de agenda, e a issue vira unidade de acompanhamento do que surgiu durante a execução
+
+Depois disso, você pode abrir o detalhe do trabalho e usar `Editar` em qualquer issue para ajustar milestone, tipo, título ou contexto sem perder o vínculo com o bloco de origem.
+
+### Caso 10. Registrar uma issue direto no detalhe do trabalho
+Objetivo:
+- registrar tarefa ou problema sem depender de um bloco em execução
+
+Passos:
+1. Abra `Trabalhos` ou o detalhe completo de um trabalho.
+2. Na seção `Issues do trabalho`, clique em `Nova issue`.
+3. Escolha `tipo`.
+4. Se quiser, vincule a uma `milestone`.
+5. Preencha `título` e `contexto`.
+6. Clique em `Registrar issue`.
+
+Resultado esperado:
+- a issue fica vinculada ao trabalho atual
+- se houver milestone escolhida, ela aparece agrupada nessa etapa
+- o registro entra no mesmo fluxo de edição já existente
+
+### Caso 11. Triar uma nova demanda antes de virar trabalho
 Objetivo:
 - registrar entrada sem comprometer agenda imediatamente
 
@@ -363,7 +414,7 @@ Resultado esperado:
 - ela ainda não ocupa agenda fixa
 - o time pode decidir depois se vira trabalho
 
-### Caso 10. Ler capacidade antes de aceitar um novo trabalho
+### Caso 12. Ler capacidade antes de aceitar um novo trabalho
 Objetivo:
 - entender se a semana comporta uma nova carga
 

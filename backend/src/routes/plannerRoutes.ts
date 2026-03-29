@@ -14,7 +14,10 @@ import { executePlannerCommand } from "../../../src/domain/plannerEngine";
 import {
   createPlannerRequest,
   createPlannerWork,
+  updatePlannerWork,
+  validatePlannerWorkUpdate,
 } from "../../../src/domain/plannerIntake";
+import { createPlannerIssue, updatePlannerIssue } from "../../../src/domain/plannerIssues";
 import {
   buildExecutionApplication,
   buildReviewResolutionApplication,
@@ -33,6 +36,7 @@ import type {
   AutoReplanWeekHttpRequest,
   CompleteBlockHttpRequest,
   ConfirmDayClosingHttpRequest,
+  CreateIssueHttpRequest,
   CreateRequestHttpRequest,
   CreateWorkHttpRequest,
   DaySummaryHttpResponse,
@@ -48,6 +52,8 @@ import type {
   ReviewItemsHttpResponse,
   ShortHorizonHttpResponse,
   StartBlockHttpRequest,
+  UpdateIssueHttpRequest,
+  UpdateWorkHttpRequest,
 } from "../../../src/application/remoteContracts";
 import type {
   PlannerCommandContext,
@@ -1002,6 +1008,219 @@ export const plannerRoutes: FastifyPluginAsync<{ store: PlannerStore }> = async 
 
   fastify.post("/api/planner/works", async (request, reply) => {
     await handleCreateWork(request, reply);
+  });
+
+  const handleUpdateWork = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    workIdOverride?: string,
+  ) => {
+    const body = readContextBody<UpdateWorkHttpRequest>(request);
+    const workId = workIdOverride ?? ((request.params as { workId?: string } | undefined)?.workId);
+
+    if (!body.context?.referenceDate) {
+      throw new ApiError({
+        statusCode: 400,
+        code: "validation_failed",
+        message: "context.referenceDate é obrigatório.",
+        operation: "update_work",
+        context: { field: "context.referenceDate" },
+      });
+    }
+
+    if (!workId || !body.input?.titulo?.trim()) {
+      throw new ApiError({
+        statusCode: 400,
+        code: "validation_failed",
+        message: "workId e input.titulo são obrigatórios.",
+        operation: "update_work",
+        context: {
+          field: !workId ? "workId" : "input.titulo",
+        },
+      });
+    }
+
+    const currentData = store.read();
+    const referenceDate = resolveReferenceDate(
+      currentData,
+      body.context.referenceDate,
+      "update_work",
+    );
+    const validationError = validatePlannerWorkUpdate({
+      data: currentData,
+      workId,
+      input: body.input,
+    });
+
+    if (validationError) {
+      throw new ApiError({
+        statusCode: validationError.code === "not_found" ? 404 : 400,
+        code: validationError.code === "not_found" ? "not_found" : "validation_failed",
+        message: validationError.message,
+        operation: "update_work",
+        context: {
+          targetId: validationError.targetId ?? workId,
+          field: validationError.field,
+          detail: validationError.detail,
+        },
+      });
+    }
+
+    const resolution = updatePlannerWork({
+      data: currentData,
+      referenceDate,
+      workId,
+      input: body.input,
+    });
+
+    if (!resolution) {
+      throw new ApiError({
+        statusCode: 409,
+        code: "invalid_state",
+        message: "Não foi possível atualizar o trabalho informado.",
+        operation: "update_work",
+        context: { targetId: workId },
+      });
+    }
+
+    await store.write(resolution.nextData);
+    reply.send(createSuccess(request.id, buildOperationResult(resolution)));
+  };
+
+  fastify.patch("/planner/works/:workId", async (request, reply) => {
+    const params = request.params as { workId?: string };
+    await handleUpdateWork(request, reply, params.workId);
+  });
+
+  fastify.patch("/api/planner/works/:workId", async (request, reply) => {
+    const params = request.params as { workId?: string };
+    await handleUpdateWork(request, reply, params.workId);
+  });
+
+  const handleCreateIssue = async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = readContextBody<CreateIssueHttpRequest>(request);
+
+    if (!body.context?.referenceDate) {
+      throw new ApiError({
+        statusCode: 400,
+        code: "validation_failed",
+        message: "context.referenceDate é obrigatório.",
+        operation: "create_issue",
+        context: { field: "context.referenceDate" },
+      });
+    }
+
+    if (!body.input?.trabalhoId || !body.input?.titulo?.trim()) {
+      throw new ApiError({
+        statusCode: 400,
+        code: "validation_failed",
+        message: "input.trabalhoId e input.titulo são obrigatórios.",
+        operation: "create_issue",
+        context: {
+          field: !body.input?.trabalhoId ? "input.trabalhoId" : "input.titulo",
+        },
+      });
+    }
+
+    const currentData = store.read();
+    const referenceDate = resolveReferenceDate(
+      currentData,
+      body.context.referenceDate,
+      "create_issue",
+    );
+    const resolution = createPlannerIssue({
+      data: currentData,
+      referenceDate,
+      input: body.input,
+    });
+
+    if (!resolution) {
+      throw new ApiError({
+        statusCode: 409,
+        code: "invalid_state",
+        message: "Não foi possível registrar a issue para o trabalho informado.",
+        operation: "create_issue",
+        context: { targetId: body.input.trabalhoId },
+      });
+    }
+
+    await store.write(resolution.nextData);
+    reply.send(createSuccess(request.id, buildOperationResult(resolution)));
+  };
+
+  fastify.post("/planner/issues", async (request, reply) => {
+    await handleCreateIssue(request, reply);
+  });
+
+  fastify.post("/api/planner/issues", async (request, reply) => {
+    await handleCreateIssue(request, reply);
+  });
+
+  const handleUpdateIssue = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+    issueIdOverride?: string,
+  ) => {
+    const body = readContextBody<UpdateIssueHttpRequest>(request);
+    const issueId = issueIdOverride ?? ((request.params as { issueId?: string } | undefined)?.issueId);
+
+    if (!body.context?.referenceDate) {
+      throw new ApiError({
+        statusCode: 400,
+        code: "validation_failed",
+        message: "context.referenceDate é obrigatório.",
+        operation: "update_issue",
+        context: { field: "context.referenceDate" },
+      });
+    }
+
+    if (!issueId || !body.input?.titulo?.trim()) {
+      throw new ApiError({
+        statusCode: 400,
+        code: "validation_failed",
+        message: "issueId e input.titulo são obrigatórios.",
+        operation: "update_issue",
+        context: {
+          field: !issueId ? "issueId" : "input.titulo",
+        },
+      });
+    }
+
+    const currentData = store.read();
+    const referenceDate = resolveReferenceDate(
+      currentData,
+      body.context.referenceDate,
+      "update_issue",
+    );
+    const resolution = updatePlannerIssue({
+      data: currentData,
+      referenceDate,
+      issueId,
+      input: body.input,
+    });
+
+    if (!resolution) {
+      throw new ApiError({
+        statusCode: 409,
+        code: "invalid_state",
+        message: "Não foi possível atualizar a issue informada.",
+        operation: "update_issue",
+        context: { targetId: issueId },
+      });
+    }
+
+    await store.write(resolution.nextData);
+    reply.send(createSuccess(request.id, buildOperationResult(resolution)));
+  };
+
+  fastify.patch("/planner/issues/:issueId", async (request, reply) => {
+    const params = request.params as { issueId?: string };
+    await handleUpdateIssue(request, reply, params.issueId);
+  });
+
+  fastify.patch("/api/planner/issues/:issueId", async (request, reply) => {
+    const params = request.params as { issueId?: string };
+    await handleUpdateIssue(request, reply, params.issueId);
   });
 
   const handleCreateRequest = async (request: FastifyRequest, reply: FastifyReply) => {

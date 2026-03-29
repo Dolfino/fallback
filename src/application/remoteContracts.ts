@@ -2,9 +2,12 @@ import type { TodayDecisionSummary } from "../data/selectors";
 import type {
   ImmediateImpactSummary,
   PlannerConsequence,
+  PlannerIssueInput,
+  PlannerIssueUpdateInput,
   PlannerRequestInput,
   PlannerTransitionUiPatch,
   PlannerWorkInput,
+  PlannerWorkUpdateInput,
   ReviewFlowState,
   ReviewItemView,
   ReviewOption,
@@ -30,6 +33,9 @@ export const plannerApiRoutes = {
   applyDependencyPolicy: (dependencyId: string) =>
     `/api/planner/dependencies/${dependencyId}/policy`,
   createWork: () => "/api/planner/works",
+  updateWork: (workId: string) => `/api/planner/works/${workId}`,
+  createIssue: () => "/api/planner/issues",
+  updateIssue: (issueId: string) => `/api/planner/issues/${issueId}`,
   createRequest: () => "/api/planner/requests",
   getDaySummary: (referenceDate: string) => `/api/planner/days/${referenceDate}/summary`,
   getShortHorizon: () => "/api/planner/horizon",
@@ -148,6 +154,21 @@ export interface ApplyDependencyPolicyHttpRequest {
 export interface CreateWorkHttpRequest {
   context: RemoteOperationContext;
   input: PlannerWorkInput;
+}
+
+export interface UpdateWorkHttpRequest {
+  context: RemoteOperationContext;
+  input: PlannerWorkUpdateInput;
+}
+
+export interface CreateIssueHttpRequest {
+  context: RemoteOperationContext;
+  input: PlannerIssueInput;
+}
+
+export interface UpdateIssueHttpRequest {
+  context: RemoteOperationContext;
+  input: PlannerIssueUpdateInput;
 }
 
 export interface CreateRequestHttpRequest {

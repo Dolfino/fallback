@@ -1,5 +1,6 @@
 import type {
   ApplyDependencyPolicyRequest,
+  CreatePlannerIssueRequest,
   CreatePlannerRequestRequest,
   CreatePlannerWorkRequest,
   ExecutePlannerCommandRequest,
@@ -17,6 +18,8 @@ import type {
   RescheduleSuggestionQueryRequest,
   OpenPlannerDependencyRequest,
   ResolvePlannerDependencyRequest,
+  UpdatePlannerIssueRequest,
+  UpdatePlannerWorkRequest,
 } from "./plannerAppContracts";
 import type { PlannerAppPort } from "./plannerAppPort";
 import { createRemoteClient, type RemoteClientFailure } from "./remoteClient";
@@ -27,6 +30,7 @@ import {
   type AutoReplanWeekHttpRequest,
   type CompleteBlockHttpRequest,
   type ConfirmDayClosingHttpRequest,
+  type CreateIssueHttpRequest,
   type CreateRequestHttpRequest,
   type CreateWorkHttpRequest,
   type DaySummaryHttpResponse,
@@ -43,6 +47,8 @@ import {
   type ReviewItemsHttpResponse,
   type ShortHorizonHttpResponse,
   type StartBlockHttpRequest,
+  type UpdateIssueHttpRequest,
+  type UpdateWorkHttpRequest,
 } from "./remoteContracts";
 import type {
   PlannerOperationApplication,
@@ -395,6 +401,60 @@ export function createPlannerRemoteAdapter(
       return response.ok
         ? toOperationSuccess("create_work", request.meta, response.data)
         : toOperationFailure("create_work", request.meta, response);
+    },
+
+    async updateWork(
+      request: UpdatePlannerWorkRequest,
+    ): Promise<PlannerAppOperationResponse> {
+      const body: UpdateWorkHttpRequest = {
+        context: toRemoteContext(request),
+        input: request.input,
+      };
+      const response = await client.request<RemotePlannerOperationResult>({
+        path: plannerApiRoutes.updateWork(request.workId),
+        method: "PATCH",
+        body,
+      });
+
+      return response.ok
+        ? toOperationSuccess("update_work", request.meta, response.data)
+        : toOperationFailure("update_work", request.meta, response);
+    },
+
+    async createIssue(
+      request: CreatePlannerIssueRequest,
+    ): Promise<PlannerAppOperationResponse> {
+      const body: CreateIssueHttpRequest = {
+        context: toRemoteContext(request),
+        input: request.input,
+      };
+      const response = await client.request<RemotePlannerOperationResult>({
+        path: plannerApiRoutes.createIssue(),
+        method: "POST",
+        body,
+      });
+
+      return response.ok
+        ? toOperationSuccess("create_issue", request.meta, response.data)
+        : toOperationFailure("create_issue", request.meta, response);
+    },
+
+    async updateIssue(
+      request: UpdatePlannerIssueRequest,
+    ): Promise<PlannerAppOperationResponse> {
+      const body: UpdateIssueHttpRequest = {
+        context: toRemoteContext(request),
+        input: request.input,
+      };
+      const response = await client.request<RemotePlannerOperationResult>({
+        path: plannerApiRoutes.updateIssue(request.issueId),
+        method: "PATCH",
+        body,
+      });
+
+      return response.ok
+        ? toOperationSuccess("update_issue", request.meta, response.data)
+        : toOperationFailure("update_issue", request.meta, response);
     },
 
     async createRequest(

@@ -380,6 +380,7 @@ export function TodayPage({ controller }: { controller: PlannerController }) {
           impactSummary={controller.impactSummary}
           item={selectedItem}
           blockingContext={blockingContext}
+          onCreateIssue={controller.addIssue}
           onOpenWork={(workId) => {
             controller.selectWork(workId);
             controller.navigate("work-detail");

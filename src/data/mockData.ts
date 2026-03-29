@@ -408,6 +408,7 @@ export function createMockPlannerData(referenceDate = new Date()): PlannerData {
     alocacoes,
     dependencias,
     registros,
+    issues: [],
     solicitacoes,
     fechamentosOperacionais: [],
   };

@@ -112,6 +112,7 @@ export function WeekPage({ controller }: { controller: PlannerController }) {
           history={history}
           impactSummary={controller.impactSummary}
           item={selectedItem}
+          onCreateIssue={controller.addIssue}
           onOpenWork={(workId) => {
             controller.selectWork(workId);
             controller.navigate("work-detail");

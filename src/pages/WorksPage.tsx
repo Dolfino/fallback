@@ -1,6 +1,6 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { ListControlsCard } from "../components/ui/ListControls";
-import { getWorkTimeline } from "../data/selectors";
+import { getWorkTimeline, isWorkOperationallyVisible } from "../data/selectors";
 import type { PlannerController } from "../hooks/usePlannerState";
 import { WorkDetailPanel } from "../components/domain/WorkDetailPanel";
 import { WorkItemCard } from "../components/domain/WorkItemCard";
@@ -10,12 +10,13 @@ export function WorksPage({ controller }: { controller: PlannerController }) {
   const deferredSearch = useDeferredValue(search);
   const filteredWorks = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
+    const visibleWorks = controller.plannerData.trabalhos.filter(isWorkOperationallyVisible);
 
     if (!query) {
-      return controller.plannerData.trabalhos;
+      return visibleWorks;
     }
 
-    return controller.plannerData.trabalhos.filter((item) =>
+    return visibleWorks.filter((item) =>
       [item.titulo, item.descricao, item.clienteProjeto, item.categoria]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(query)),
@@ -24,6 +25,7 @@ export function WorksPage({ controller }: { controller: PlannerController }) {
   const trabalho =
     filteredWorks.find((item) => item.id === controller.selectedWorkId) ?? filteredWorks[0];
   const timeline = trabalho ? getWorkTimeline(controller.plannerData, trabalho.id) : [];
+  const issues = controller.plannerData.issues.filter((issue) => issue.trabalhoId === trabalho?.id);
   const dependencias = controller.plannerData.dependencias.filter((item) => item.trabalhoId === trabalho?.id);
   const registros = controller.plannerData.registros.filter((registro) => {
     const allocation = controller.plannerData.alocacoes.find((item) => item.id === registro.alocacaoId);
@@ -65,6 +67,10 @@ export function WorksPage({ controller }: { controller: PlannerController }) {
       <div className="scrollbar-thin overflow-y-auto pr-1">
         <WorkDetailPanel
           dependencias={dependencias}
+          issues={issues}
+          onCreateIssue={controller.addIssue}
+          onUpdateIssue={controller.updateIssue}
+          onUpdateWork={controller.updateWork}
           registros={registros}
           searchTerm={search}
           timeline={timeline}

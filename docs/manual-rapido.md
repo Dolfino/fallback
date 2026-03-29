@@ -134,6 +134,15 @@ Ao criar um trabalho, você pode informar:
 - prioridade
 
 As subtarefas aparecem no detalhe do trabalho como etapas internas.
+Durante a execução de um bloco, você também pode registrar `issues` ligadas ao trabalho e, quando fizer sentido, à etapa interna correspondente.
+No detalhe do trabalho, essas issues podem ser criadas e editadas depois para ajustar milestone, tipo, título e contexto.
+No mesmo detalhe, também é possível editar:
+- título e subtítulo do trabalho
+- prazo
+- estimado total
+- título, subtítulo e tempo das etapas internas
+
+Quando a soma das etapas mudar, use `Usar soma das etapas no estimado` se quiser sincronizar o estimado total antes de salvar.
 
 ## Atalhos de teclado
 Nas telas `Hoje`, `Semana`, `Agendas` e `Fechamento do Dia`:

@@ -75,6 +75,9 @@ export interface EtapaTrabalho {
   duracaoEstimadaMin: number;
 }
 
+export type TipoIssueTrabalho = "tarefa" | "problema";
+export type StatusIssueTrabalho = "aberta" | "resolvida" | "descartada";
+
 export interface Trabalho {
   id: string;
   titulo: string;
@@ -143,6 +146,20 @@ export interface RegistroExecucao {
   motivo?: string;
 }
 
+export interface IssueTrabalho {
+  id: string;
+  trabalhoId: string;
+  etapaId?: string;
+  blocoId?: string;
+  alocacaoId?: string;
+  tipo: TipoIssueTrabalho;
+  status: StatusIssueTrabalho;
+  titulo: string;
+  descricao: string;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
 export interface Solicitacao {
   id: string;
   tituloInicial: string;
@@ -173,6 +190,7 @@ export interface PlannerData {
   alocacoes: Alocacao[];
   dependencias: Dependencia[];
   registros: RegistroExecucao[];
+  issues: IssueTrabalho[];
   solicitacoes: Solicitacao[];
   fechamentosOperacionais?: FechamentoOperacional[];
 }

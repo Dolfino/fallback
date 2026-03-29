@@ -76,7 +76,11 @@ function isPersistedPlannerSnapshot(value: unknown): value is PersistedPlannerSn
 
 function normalizePlannerDataHorizon(data: PlannerData) {
   if (data.diasSemana.length >= operationalHorizonDays) {
-    return data;
+    return {
+      ...data,
+      issues: data.issues ?? [],
+      fechamentosOperacionais: data.fechamentosOperacionais ?? [],
+    };
   }
 
   const regenerated = createMockPlannerData(new Date(`${data.dataOperacional}T12:00:00.000Z`));
@@ -84,6 +88,8 @@ function normalizePlannerDataHorizon(data: PlannerData) {
     {
       ...data,
       diasSemana: regenerated.diasSemana,
+      issues: data.issues ?? [],
+      fechamentosOperacionais: data.fechamentosOperacionais ?? [],
     },
     data.dataOperacional,
   );

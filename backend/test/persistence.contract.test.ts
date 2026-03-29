@@ -134,6 +134,45 @@ describe("planner snapshot persistence", () => {
     expect(item.status).toBe("remarcado");
   });
 
+  it("preserves registered issues across restart", async () => {
+    const snapshotFilePath = createTempSnapshotFilePath();
+    resetPlannerSnapshot(snapshotFilePath);
+
+    const firstApp = await createTestServerForSnapshot(snapshotFilePath);
+    apps.push(firstApp);
+
+    const mutate = await firstApp.inject({
+      method: "POST",
+      url: "/api/planner/issues",
+      payload: {
+        context: { referenceDate: "2026-03-24" },
+        input: {
+          trabalhoId: "campanhas-marketing-digital",
+          etapaId: "cronograma",
+          blocoId: "bloco-campanhas-marketing-digital-1",
+          alocacaoId: "aloc-25",
+          tipo: "problema",
+          titulo: "Pendência do cronograma",
+          descricao: "Ainda falta a confirmação final do calendário.",
+        },
+      },
+    });
+    expect(mutate.statusCode).toBe(200);
+
+    await firstApp.close();
+    apps.pop();
+
+    const secondApp = await createTestServerForSnapshot(snapshotFilePath);
+    apps.push(secondApp);
+
+    const persisted = loadTestSnapshot(snapshotFilePath);
+    const issue = persisted.plannerData.issues.find((entry) => entry.titulo === "Pendência do cronograma");
+
+    expect(issue).toBeTruthy();
+    expect(issue?.etapaId).toBe("cronograma");
+    expect(issue?.blocoId).toBe("bloco-campanhas-marketing-digital-1");
+  });
+
   it("expands legacy snapshots to the current operational horizon on boot", () => {
     const snapshotFilePath = createTempSnapshotFilePath();
     const seed = createSeedPlannerSnapshot();

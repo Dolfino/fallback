@@ -7,10 +7,13 @@ import type {
 import type { PlannerOperationApplication } from "../domain/plannerOperationApplier";
 import type {
   DependencyPolicyAction,
+  PlannerIssueInput,
+  PlannerIssueUpdateInput,
   PlannerRequestInput,
   PlannerCommandName,
   PlannerCommandPayloadMap,
   PlannerWorkInput,
+  PlannerWorkUpdateInput,
   ReviewAction,
   ReviewFlowState,
   ReviewItemView,
@@ -21,6 +24,9 @@ import type { PlannerData } from "../types/planner";
 export type PlannerAppOperationKind =
   | PlannerCommandName
   | "create_work"
+  | "update_work"
+  | "create_issue"
+  | "update_issue"
   | "create_request"
   | "resolve_review"
   | "open_dependency"
@@ -103,6 +109,26 @@ export interface CreatePlannerWorkRequest {
   meta: PlannerAppRequestMeta;
   state: PlannerAppStateSnapshot;
   input: PlannerWorkInput;
+}
+
+export interface UpdatePlannerWorkRequest {
+  meta: PlannerAppRequestMeta;
+  state: PlannerAppStateSnapshot;
+  workId: string;
+  input: PlannerWorkUpdateInput;
+}
+
+export interface CreatePlannerIssueRequest {
+  meta: PlannerAppRequestMeta;
+  state: PlannerAppStateSnapshot;
+  input: PlannerIssueInput;
+}
+
+export interface UpdatePlannerIssueRequest {
+  meta: PlannerAppRequestMeta;
+  state: PlannerAppStateSnapshot;
+  issueId: string;
+  input: PlannerIssueUpdateInput;
 }
 
 export interface CreatePlannerRequestRequest {

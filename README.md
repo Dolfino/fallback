@@ -50,6 +50,8 @@ npm run backend:dev
 - foco inicial automático no dia útil atual e, em fim de semana, no próximo dia útil disponível
 - horizonte semanal visível alinhado com a data em foco
 - fechamento operacional com replanejamento do dia, carregamento de pendências anteriores e confirmação persistida
+- edição de trabalho com prazo, estimado, etapas internas e reconciliação de blocos
+- registro de issues tanto durante a execução do bloco quanto direto no detalhe do trabalho
 
 ## Variáveis de ambiente
 O arquivo [.env.example](/home/dns/Desenvolvimento/Planejador/.env.example) reúne as variáveis mais úteis para frontend, backend, PostgreSQL e smoke test.
